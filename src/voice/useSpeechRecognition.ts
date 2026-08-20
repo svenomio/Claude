@@ -62,12 +62,21 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
       // instead of appending only the "new" range indicated by resultIndex.
       // In continuous mode, some browsers re-emit already-finalized results
       // with an unreliable resultIndex, which would otherwise duplicate text.
+      // On top of that, some engines (observed on Android Chrome) restart
+      // recognition internally and re-finalize the exact same phrase as a
+      // brand-new result entry — so we also drop back-to-back final chunks
+      // that are identical to the one right before them.
       let finalText = "";
       let interimText = "";
+      let lastFinal = "";
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          finalText += (finalText ? " " : "") + result[0].transcript;
+          const chunk = result[0].transcript.trim();
+          if (chunk && chunk.toLowerCase() !== lastFinal.toLowerCase()) {
+            finalText += (finalText ? " " : "") + chunk;
+            lastFinal = chunk;
+          }
         } else {
           interimText += result[0].transcript;
         }

@@ -193,7 +193,22 @@ export function parseExpenses(transcript: string, categories: Category[]): Parse
     items.push({ amount: anchor.amount, category, description });
     prevEnd = anchor.end;
   }
-  return items;
+  return dedupeAdjacent(items);
+}
+
+// Safety net against upstream transcript duplication (e.g. a speech engine
+// re-finalizing the same phrase): if two consecutive items end up with the
+// exact same amount, category and description, treat it as one mention.
+function dedupeAdjacent(items: ParsedExpense[]): ParsedExpense[] {
+  return items.filter((item, i) => {
+    const prev = items[i - 1];
+    if (!prev) return true;
+    return !(
+      prev.amount === item.amount &&
+      prev.category === item.category &&
+      prev.description.toLowerCase() === item.description.toLowerCase()
+    );
+  });
 }
 
 function capitalize(s: string): string {
