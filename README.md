@@ -4,7 +4,7 @@ Eine Progressive Web App zum Tracken von Ausgaben per Sprache. Einfach das Mikro
 
 ## Features
 
-- **Voice-Input**: Spracherkennung (Web Speech API, `de-DE`), toleriert kurze Sprechpausen (3,5s Silence-Timeout statt sofortigem Abbruch)
+- **Voice-Input**: Spracherkennung (Web Speech API, `de-DE`). Eine Aufnahme pro Antippen, endet automatisch nach der Pause am Satzende – für mehrere Ausgaben in unterschiedlichen Sätzen einfach nochmal antippen
 - **Multi-Item-Erkennung**: ein Satz mit mehreren Ausgaben wird automatisch in einzelne Posten aufgeteilt
 - **Sofort-Speichern**: erkannte Posten werden direkt übernommen, kein Bestätigungsschritt nötig – Korrekturen passieren nachträglich per Klick auf einen Eintrag in der Liste
 - **Lokale Speicherung**: Alle Daten bleiben offline auf dem Gerät (IndexedDB via Dexie)
