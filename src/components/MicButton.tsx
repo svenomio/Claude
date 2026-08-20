@@ -16,7 +16,7 @@ export function MicButton({ isListening, isSupported, onClick }: MicButtonProps)
           "disabled:cursor-not-allowed disabled:opacity-40",
           isListening
             ? "bg-violet-500 shadow-[0_0_0_12px_rgba(124,58,237,0.25)] scale-105"
-            : "bg-violet-600 hover:bg-violet-500 active:scale-95 shadow-lg shadow-violet-950/50",
+            : "bg-violet-600 hover:bg-violet-500 active:scale-95 shadow-lg shadow-violet-600/30",
         ].join(" ")}
       >
         {isListening && (
@@ -24,7 +24,7 @@ export function MicButton({ isListening, isSupported, onClick }: MicButtonProps)
         )}
         <span className="relative">{isListening ? "⏹" : "🎤"}</span>
       </button>
-      <p className="text-sm text-zinc-400">
+      <p className="text-sm text-zinc-500">
         {!isSupported
           ? "Spracherkennung nicht unterstützt – nutze die manuelle Eingabe"
           : isListening

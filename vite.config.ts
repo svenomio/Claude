@@ -17,7 +17,7 @@ export default defineConfig({
         short_name: 'Sparcity',
         description: 'Sprich deine Ausgaben – Sparcity trackt dein Budget per Voice.',
         theme_color: '#7c3aed',
-        background_color: '#0f0f14',
+        background_color: '#f7f7fb',
         display: 'standalone',
         start_url: '/Claude/',
         scope: '/Claude/',

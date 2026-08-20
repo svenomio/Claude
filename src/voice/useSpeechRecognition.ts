@@ -21,6 +21,11 @@ export interface UseSpeechRecognitionResult {
   reset: () => void;
 }
 
+// Wie lange nach der letzten erkannten Sprache gewartet wird, bevor die
+// Aufnahme automatisch beendet wird. Der Browser selbst reagiert auf kurze
+// Pausen viel zu empfindlich, deshalb übernehmen wir das Timing hier.
+const SILENCE_TIMEOUT_MS = 3500;
+
 export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult {
   const Ctor = getRecognitionCtor();
   const [isListening, setIsListening] = useState(false);
@@ -28,15 +33,31 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
   const [interimTranscript, setInterimTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current !== null) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }, []);
+
+  const armSilenceTimer = useCallback(() => {
+    clearSilenceTimer();
+    silenceTimerRef.current = setTimeout(() => {
+      recognitionRef.current?.stop();
+    }, SILENCE_TIMEOUT_MS);
+  }, [clearSilenceTimer]);
 
   useEffect(() => {
     if (!Ctor) return;
     const recognition = new Ctor();
     recognition.lang = lang;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      armSilenceTimer();
       let finalText = "";
       let interimText = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -52,21 +73,24 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      clearSilenceTimer();
       setError(event.error);
       setIsListening(false);
     };
 
     recognition.onend = () => {
+      clearSilenceTimer();
       setIsListening(false);
       setInterimTranscript("");
     };
 
     recognitionRef.current = recognition;
     return () => {
+      clearSilenceTimer();
       recognition.stop();
       recognitionRef.current = null;
     };
-  }, [Ctor, lang]);
+  }, [Ctor, lang, armSilenceTimer, clearSilenceTimer]);
 
   const start = useCallback(() => {
     if (!recognitionRef.current || isListening) return;
@@ -76,15 +100,17 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
     try {
       recognitionRef.current.start();
       setIsListening(true);
+      armSilenceTimer();
     } catch {
       // start() throws if already started; ignore
     }
-  }, [isListening]);
+  }, [isListening, armSilenceTimer]);
 
   const stop = useCallback(() => {
+    clearSilenceTimer();
     recognitionRef.current?.stop();
     setIsListening(false);
-  }, []);
+  }, [clearSilenceTimer]);
 
   const reset = useCallback(() => {
     setTranscript("");

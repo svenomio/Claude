@@ -67,7 +67,7 @@ function App() {
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-6 px-5 pb-10 pt-8 text-zinc-100">
+    <div className="flex flex-1 flex-col gap-6 px-5 pb-10 pt-8 text-zinc-900">
       <header className="text-center">
         <h1 className="text-2xl font-semibold">💜 Sparcity Voice</h1>
         <p className="mt-1 text-sm text-zinc-500">Sag deine Ausgabe, wir tracken den Rest.</p>
@@ -82,9 +82,9 @@ function App() {
           onClick={() => (isListening ? stop() : start())}
         />
         {interimTranscript && (
-          <p className="max-w-full truncate text-sm italic text-zinc-400">"{interimTranscript}"</p>
+          <p className="max-w-full truncate text-sm italic text-zinc-500">"{interimTranscript}"</p>
         )}
-        {error && <p className="text-xs text-red-400">Fehler: {error}</p>}
+        {error && <p className="text-xs text-red-500">Fehler: {error}</p>}
       </div>
 
       {draft && (
@@ -105,7 +105,7 @@ function App() {
             onChange={(e) => setManualText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
             placeholder='z. B. "Kaffee 3,50 Euro"'
-            className="flex-1 rounded-lg bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-violet-500"
+            className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:ring-2 focus:ring-violet-500"
           />
           <button
             onClick={handleManualSubmit}
