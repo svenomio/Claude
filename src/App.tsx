@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, ensureDefaultCategories, currentMonth } from "./db/db";
 import { useSpeechRecognition } from "./voice/useSpeechRecognition";
-import { parseExpense, type ParsedExpense } from "./voice/parser";
+import { parseExpenses, type ParsedExpense } from "./voice/parser";
 import { MicButton } from "./components/MicButton";
 import { BudgetOverview } from "./components/BudgetOverview";
 import { ExpenseList } from "./components/ExpenseList";
 import { ExpenseDraftCard } from "./components/ExpenseDraftCard";
 
 function App() {
-  const [draft, setDraft] = useState<{ parsed: ParsedExpense; transcript: string } | null>(null);
+  const [draft, setDraft] = useState<{ items: ParsedExpense[]; transcript: string } | null>(null);
   const [manualText, setManualText] = useState("");
 
   const { isSupported, isListening, transcript, interimTranscript, start, stop, reset, error } =
@@ -33,28 +33,31 @@ function App() {
 
   useEffect(() => {
     if (!isListening && transcript && categories.length > 0) {
-      const parsed = parseExpense(transcript, categories);
-      setDraft({ parsed, transcript });
+      const items = parseExpenses(transcript, categories);
+      setDraft({ items, transcript });
       reset();
     }
   }, [isListening, transcript, categories, reset]);
 
-  const saveExpense = async (parsed: ParsedExpense, rawTranscript?: string) => {
-    if (parsed.amount === null) return;
-    await db.expenses.add({
-      amount: parsed.amount,
-      description: parsed.description,
-      category: parsed.category,
-      date: new Date().toISOString(),
-      rawTranscript,
-    } as never);
+  const saveExpenses = async (items: ParsedExpense[], rawTranscript?: string) => {
+    const validItems = items.filter((item) => item.amount !== null && item.amount > 0);
+    if (validItems.length === 0) return;
+    await db.expenses.bulkAdd(
+      validItems.map((item) => ({
+        amount: item.amount as number,
+        description: item.description,
+        category: item.category,
+        date: new Date().toISOString(),
+        rawTranscript,
+      })) as never,
+    );
     setDraft(null);
   };
 
   const handleManualSubmit = () => {
     if (!manualText.trim() || categories.length === 0) return;
-    const parsed = parseExpense(manualText.trim(), categories);
-    setDraft({ parsed, transcript: manualText.trim() });
+    const items = parseExpenses(manualText.trim(), categories);
+    setDraft({ items, transcript: manualText.trim() });
     setManualText("");
   };
 
@@ -89,10 +92,10 @@ function App() {
 
       {draft && (
         <ExpenseDraftCard
-          draft={draft.parsed}
+          items={draft.items}
           transcript={draft.transcript}
           categories={categories}
-          onConfirm={(parsed) => saveExpense(parsed, draft.transcript)}
+          onConfirm={(items) => saveExpenses(items, draft.transcript)}
           onDiscard={() => setDraft(null)}
         />
       )}

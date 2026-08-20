@@ -34,7 +34,7 @@ db.version(1).stores({
 });
 
 export const DEFAULT_CATEGORIES: Category[] = [
-  { name: "Lebensmittel", keywords: ["essen", "lebensmittel", "supermarkt", "einkauf", "einkaufen"], icon: "🛒" },
+  { name: "Lebensmittel", keywords: ["essen", "lebensmittel", "supermarkt", "einkauf", "einkaufen", "cola", "brot", "wasser", "getränk", "snack", "obst", "gemüse"], icon: "🛒" },
   { name: "Café & Restaurant", keywords: ["kaffee", "café", "restaurant", "mittagessen", "essen gehen"], icon: "☕" },
   { name: "Transport", keywords: ["bahn", "bus", "taxi", "tanken", "benzin", "ticket", "parken"], icon: "🚗" },
   { name: "Freizeit", keywords: ["kino", "konzert", "freizeit", "hobby", "sport"], icon: "🎉" },

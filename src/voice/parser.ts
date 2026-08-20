@@ -48,60 +48,89 @@ function extractNumberToken(text: string, startIndex: number): { value: number; 
   return null;
 }
 
-/**
- * Parses German amount phrases such as:
- *  "3,50 Euro", "17 Euro", "50 Cent", "drei Euro fünfzig",
- *  "zwei Euro", "17,50", "5 Euro 20 Cent"
- */
-function extractAmount(text: string): { amount: number | null; matchedSpan: [number, number] | null } {
-  const lower = text.toLowerCase();
+interface AmountMatch {
+  amount: number;
+  start: number;
+  end: number;
+}
 
-  const eurosThenCents = /(\d+(?:[.,]\d{1,2})?|[a-zäöüß]+)\s*(?:euro|€)\s*(?:und\s*)?(\d+|[a-zäöüß]+)?\s*(?:cent)?/i;
-  const match = lower.match(eurosThenCents);
-  if (match) {
-    const startIdx = match.index ?? 0;
-    const euroTok = extractNumberToken(lower, startIdx);
+/**
+ * Finds the leftmost monetary amount in `text`, trying several phrasings
+ * and returning whichever occurs first: "3,50 Euro", "17 Euro", "50 Cent",
+ * "drei Euro fünfzig", "5 Euro 20 Cent", or a bare decimal like "1,20".
+ */
+function findLeftmostAmount(text: string): AmountMatch | null {
+  let best: AmountMatch | null = null;
+  const consider = (start: number, end: number, amount: number) => {
+    if (best === null || start < best.start) best = { amount, start, end };
+  };
+
+  const euroMatch = text.match(/(\d+(?:[.,]\d{1,2})?|[a-zäöüß]+)\s*(?:euro|€)/i);
+  if (euroMatch) {
+    const startIdx = euroMatch.index ?? 0;
+    const euroTok = extractNumberToken(text, startIdx);
     if (euroTok) {
       let amount = euroTok.value;
-      const afterEuro = lower.slice(euroTok.endIndex).match(/^\s*euro\s*(?:und\s*)?/i);
+      let endIdx = euroTok.endIndex;
+      const afterEuro = text.slice(euroTok.endIndex).match(/^\s*(?:euro|€)\s*(?:und\s*)?/i);
       if (afterEuro) {
-        const centStart = euroTok.endIndex + afterEuro[0].length;
-        const centTok = extractNumberToken(lower, centStart);
+        endIdx = euroTok.endIndex + afterEuro[0].length;
+        const centTok = extractNumberToken(text, endIdx);
         if (centTok && Number.isInteger(amount)) {
-          const isCentContext = lower.slice(centTok.endIndex).match(/^\s*cent/i);
+          const isCentContext = text.slice(centTok.endIndex).match(/^\s*cent/i);
           if (isCentContext || centTok.value < 100) {
-            amount = amount + (centTok.value >= 1 ? centTok.value / 100 : 0);
+            amount += centTok.value >= 1 ? centTok.value / 100 : 0;
+            endIdx = centTok.endIndex + (isCentContext?.[0].length ?? 0);
           }
         }
-        const endIndex = centTok
-          ? centTok.endIndex + (lower.slice(centTok.endIndex).match(/^\s*cent/i)?.[0].length ?? 0)
-          : euroTok.endIndex + afterEuro[0].length;
-        return { amount, matchedSpan: [startIdx, endIndex] };
       }
-      return { amount, matchedSpan: [startIdx, euroTok.endIndex] };
+      consider(startIdx, endIdx, amount);
     }
   }
 
-  const centOnly = lower.match(/(\d+|[a-zäöüß]+)\s*cent/i);
-  if (centOnly) {
-    const startIdx = centOnly.index ?? 0;
-    const tok = extractNumberToken(lower, startIdx);
+  const centMatch = text.match(/(\d+|[a-zäöüß]+)\s*cent/i);
+  if (centMatch) {
+    const startIdx = centMatch.index ?? 0;
+    const tok = extractNumberToken(text, startIdx);
     if (tok) {
-      const endIndex = tok.endIndex + (lower.slice(tok.endIndex).match(/^\s*cent/i)?.[0].length ?? 0);
-      return { amount: tok.value / 100, matchedSpan: [startIdx, endIndex] };
+      const endIdx = tok.endIndex + (text.slice(tok.endIndex).match(/^\s*cent/i)?.[0].length ?? 0);
+      consider(startIdx, endIdx, tok.value / 100);
     }
   }
 
-  const bareNumber = lower.match(/\d+(?:[.,]\d{1,2})?/);
-  if (bareNumber) {
-    const startIdx = bareNumber.index ?? 0;
-    return {
-      amount: parseFloat(bareNumber[0].replace(",", ".")),
-      matchedSpan: [startIdx, startIdx + bareNumber[0].length],
-    };
+  const decimalMatch = text.match(/\d+[.,]\d{2}\b/);
+  if (decimalMatch) {
+    const startIdx = decimalMatch.index ?? 0;
+    consider(startIdx, startIdx + decimalMatch[0].length, parseFloat(decimalMatch[0].replace(",", ".")));
   }
 
-  return { amount: null, matchedSpan: null };
+  return best;
+}
+
+/** Scans `text` left to right, collecting every monetary amount mentioned. */
+function findAmountAnchors(text: string): AmountMatch[] {
+  const anchors: AmountMatch[] = [];
+  let cursor = 0;
+  while (cursor < text.length) {
+    const found = findLeftmostAmount(text.slice(cursor));
+    if (!found) break;
+    anchors.push({ amount: found.amount, start: cursor + found.start, end: cursor + found.end });
+    cursor += found.end;
+  }
+  return anchors;
+}
+
+const FILLER_WORDS = new Set([
+  "ich", "habe", "hab", "für", "und", "dann", "war", "noch", "ausgegeben",
+  "um", "auch", "sowie", "außerdem", "an", "am", "beim", "hatte", "gehabt",
+]);
+
+function cleanDescription(text: string): string {
+  return text
+    .split(/\s+/)
+    .filter((w) => w && !FILLER_WORDS.has(w.toLowerCase().replace(/[.,!?]/g, "")))
+    .join(" ")
+    .trim();
 }
 
 function guessCategory(text: string, categories: Category[]): string {
@@ -119,22 +148,39 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export function parseExpense(transcript: string, categories: Category[]): ParsedExpense {
-  const { amount, matchedSpan } = extractAmount(transcript);
+/**
+ * Splits a spoken (or typed) sentence into one or more individual expenses,
+ * e.g. "Cola 1,20 und Brot 3,50 und tanken 130 Euro" becomes three items.
+ * When no amount is found at all, a single empty-amount draft is returned
+ * so the user can fill it in by hand.
+ */
+export function parseExpenses(transcript: string, categories: Category[]): ParsedExpense[] {
+  const lower = transcript.toLowerCase();
+  const anchors = findAmountAnchors(lower);
 
-  let remainder = transcript;
-  if (matchedSpan) {
-    remainder = (transcript.slice(0, matchedSpan[0]) + " " + transcript.slice(matchedSpan[1])).trim();
+  if (anchors.length === 0) {
+    const category = guessCategory(lower, categories);
+    const cleaned = cleanDescription(lower);
+    return [{ amount: null, category, description: cleaned ? capitalize(cleaned) : category }];
   }
-  remainder = remainder
-    .replace(/\bfür\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
 
-  const category = guessCategory(transcript, categories);
-  const description = remainder.length > 0 ? capitalize(remainder) : category;
+  const items: ParsedExpense[] = [];
+  let prevEnd = 0;
+  for (let i = 0; i < anchors.length; i++) {
+    const anchor = anchors[i];
+    const nextStart = anchors[i + 1]?.start ?? lower.length;
+    const beforeSlice = lower.slice(prevEnd, anchor.start);
+    const afterSlice = lower.slice(anchor.end, nextStart);
 
-  return { amount, category, description };
+    const category = guessCategory(`${beforeSlice} ${afterSlice}`, categories);
+    const cleanedBefore = cleanDescription(beforeSlice);
+    const cleaned = cleanedBefore || cleanDescription(afterSlice);
+    const description = cleaned ? capitalize(cleaned) : category;
+
+    items.push({ amount: anchor.amount, category, description });
+    prevEnd = anchor.end;
+  }
+  return items;
 }
 
 function capitalize(s: string): string {

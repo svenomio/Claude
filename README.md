@@ -1,11 +1,12 @@
 # Sparcity Voice
 
-Eine Progressive Web App zum Tracken von Ausgaben per Sprache. Einfach das Mikro antippen und sagen, was ausgegeben wurde – z. B. *"Kaffee drei Euro fünfzig"* – die App erkennt Betrag, Beschreibung und Kategorie automatisch und trackt das Monatsbudget.
+Eine Progressive Web App zum Tracken von Ausgaben per Sprache. Einfach das Mikro antippen und sagen, was ausgegeben wurde – auch mehrere Posten in einem Satz, z. B. *"Cola 1,20 und Brot 3,50 und dann noch tanken für 130 Euro"* – die App zerlegt das in einzelne Positionen mit Betrag, Beschreibung und Kategorie und trackt das Monatsbudget.
 
 ## Features
 
-- **Voice-Input**: Spracherkennung (Web Speech API, `de-DE`) mit automatischer Erkennung von Betrag und Kategorie
-- **Bestätigungs-Dialog**: Erkannte Ausgabe kann vor dem Speichern korrigiert werden
+- **Voice-Input**: Spracherkennung (Web Speech API, `de-DE`), toleriert kurze Sprechpausen (3,5s Silence-Timeout statt sofortigem Abbruch)
+- **Multi-Item-Erkennung**: ein Satz mit mehreren Ausgaben wird automatisch in einzelne Posten aufgeteilt
+- **Bestätigungs-Dialog**: erkannte Posten können vor dem Speichern einzeln korrigiert oder entfernt werden
 - **Lokale Speicherung**: Alle Daten bleiben offline auf dem Gerät (IndexedDB via Dexie)
 - **Budget-Tracking**: Monatslimit setzen, Fortschrittsbalken, Warnung bei Überschreitung
 - **PWA**: installierbar, offline-fähig (Service Worker via `vite-plugin-pwa`)
