@@ -16,6 +16,10 @@ export interface UseSpeechRecognitionResult {
   transcript: string;
   interimTranscript: string;
   error: string | null;
+  // True when the recognition ended while there was still unfinalized
+  // speech pending — a sign Chrome's own pause detection cut the user off
+  // mid-sentence rather than them finishing naturally.
+  possiblyTruncated: boolean;
   start: () => void;
   stop: () => void;
   reset: () => void;
@@ -43,7 +47,9 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [possiblyTruncated, setPossiblyTruncated] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const pendingInterimRef = useRef("");
 
   useEffect(() => {
     if (!Ctor) return;
@@ -73,6 +79,7 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
         }
       }
       if (finalText) setTranscript(finalText.trim());
+      pendingInterimRef.current = interimText;
       setInterimTranscript(interimText);
     };
 
@@ -83,6 +90,8 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
 
     recognition.onend = () => {
       setIsListening(false);
+      setPossiblyTruncated(pendingInterimRef.current.trim().length > 0);
+      pendingInterimRef.current = "";
       setInterimTranscript("");
     };
 
@@ -98,6 +107,8 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
     setError(null);
     setTranscript("");
     setInterimTranscript("");
+    setPossiblyTruncated(false);
+    pendingInterimRef.current = "";
     try {
       recognitionRef.current.start();
       setIsListening(true);
@@ -123,6 +134,7 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
     transcript,
     interimTranscript,
     error,
+    possiblyTruncated,
     start,
     stop,
     reset,

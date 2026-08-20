@@ -14,6 +14,7 @@ function App() {
     isListening,
     interimTranscript,
     error,
+    possiblyTruncated,
     start,
     stop,
     lastSaved,
@@ -82,6 +83,13 @@ function App() {
             Falsch erkannt? In der Liste unten kannst du jeden Posten nachträglich bearbeiten.
           </p>
         </div>
+      )}
+
+      {possiblyTruncated && (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          ⚠️ Die Aufnahme wurde möglicherweise mitten im Satz beendet. Bei langen Sätzen lieber
+          kurz antippen und in kleineren Portionen diktieren.
+        </p>
       )}
 
       {!isSupported && (

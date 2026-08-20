@@ -10,8 +10,17 @@ const SAVED_BANNER_MS = 5000;
 export function useExpenseCapture() {
   const [lastSaved, setLastSaved] = useState<ParsedExpense[] | null>(null);
 
-  const { isSupported, isListening, transcript, interimTranscript, start, stop, reset, error } =
-    useSpeechRecognition("de-DE");
+  const {
+    isSupported,
+    isListening,
+    transcript,
+    interimTranscript,
+    start,
+    stop,
+    reset,
+    error,
+    possiblyTruncated,
+  } = useSpeechRecognition("de-DE");
 
   useEffect(() => {
     ensureDefaultCategories();
@@ -60,6 +69,7 @@ export function useExpenseCapture() {
     isListening,
     interimTranscript,
     error,
+    possiblyTruncated,
     start,
     stop,
     lastSaved,

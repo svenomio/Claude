@@ -1,23 +1,19 @@
-import { useEffect, useRef } from "react";
 import { useExpenseCapture } from "./useExpenseCapture";
 
 /**
  * Minimal, dashboard-free capture screen meant to be opened via a pinned
- * home-screen shortcut. Starts listening immediately on open so a single
- * tap on the icon is enough to start dictating — no extra button press,
- * no budget overview, no list.
+ * home-screen shortcut — no budget overview, no list, just the mic.
+ *
+ * This used to auto-start listening on load so a single tap on the home
+ * screen icon would be enough. That silently failed in practice: browsers
+ * only allow microphone access to start from a genuine user gesture (a
+ * click/tap) within the page itself, and simply opening a page (even via a
+ * pinned shortcut) doesn't count as one. So this still needs one tap on
+ * the mic after opening — just without any dashboard in the way first.
  */
 export function QuickCapture() {
-  const { isSupported, isListening, interimTranscript, error, start, stop, lastSaved } =
+  const { isSupported, isListening, interimTranscript, error, possiblyTruncated, start, stop, lastSaved } =
     useExpenseCapture();
-  const hasAutoStarted = useRef(false);
-
-  useEffect(() => {
-    if (isSupported && !hasAutoStarted.current) {
-      hasAutoStarted.current = true;
-      start();
-    }
-  }, [isSupported, start]);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center text-zinc-900">
@@ -42,13 +38,20 @@ export function QuickCapture() {
           ? "Spracherkennung wird von diesem Browser nicht unterstützt."
           : isListening
             ? "Ich höre zu…"
-            : "Nochmal antippen zum Diktieren"}
+            : "Antippen zum Diktieren"}
       </p>
 
       {interimTranscript && (
         <p className="max-w-full truncate text-sm italic text-zinc-500">"{interimTranscript}"</p>
       )}
       {error && <p className="text-xs text-red-500">Fehler: {error}</p>}
+
+      {possiblyTruncated && (
+        <p className="max-w-sm rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          ⚠️ Die Aufnahme wurde möglicherweise mitten im Satz beendet. Bei langen Sätzen lieber
+          kurz antippen und in kleineren Portionen diktieren.
+        </p>
+      )}
 
       {lastSaved && (
         <div className="w-full max-w-sm rounded-2xl border border-green-200 bg-green-50 p-4 text-left">
