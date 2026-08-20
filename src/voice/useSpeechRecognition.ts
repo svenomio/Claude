@@ -26,6 +26,31 @@ export interface UseSpeechRecognitionResult {
 // Pausen viel zu empfindlich, deshalb übernehmen wir das Timing hier.
 const SILENCE_TIMEOUT_MS = 3500;
 
+// Fehler, bei denen ein Neustart aussichtslos ist (Berechtigung verweigert,
+// kein Mikrofon, Dienst blockiert). Alles andere (z. B. "no-speech",
+// "network") behandeln wir als vorübergehenden Ausrutscher und starten
+// die Erkennung im Hintergrund neu, ohne den Nutzer zu unterbrechen.
+const FATAL_ERRORS = new Set(["not-allowed", "service-not-allowed", "audio-capture"]);
+
+function dedupeAdjacentFinal(results: SpeechRecognitionResultList): { finalText: string; interimText: string } {
+  let finalText = "";
+  let interimText = "";
+  let lastFinal = "";
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.isFinal) {
+      const chunk = result[0].transcript.trim();
+      if (chunk && chunk.toLowerCase() !== lastFinal.toLowerCase()) {
+        finalText += (finalText ? " " : "") + chunk;
+        lastFinal = chunk;
+      }
+    } else {
+      interimText += result[0].transcript;
+    }
+  }
+  return { finalText, interimText };
+}
+
 export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult {
   const Ctor = getRecognitionCtor();
   const [isListening, setIsListening] = useState(false);
@@ -34,6 +59,17 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Android (und teils andere Browser) beenden die Erkennung im
+  // continuous-Modus gelegentlich unaufgefordert mitten im Diktat (interner
+  // Neustart, kurzer "no-speech"-Ausrutscher, ...). Wir unterscheiden das
+  // von einem echten, gewollten Stopp und starten im ersten Fall still neu,
+  // statt das bisher Gesagte als "fertig" zu behandeln und zu speichern.
+  const intentionalStopRef = useRef(false);
+  // Bereits abgeschlossene Teil-Sessions dieses einen Diktier-Vorgangs
+  // (vor einem stillen Neustart), damit beim Neustart nichts verloren geht.
+  const committedTranscriptRef = useRef("");
+  const lastSessionFinalRef = useRef("");
 
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current !== null) {
@@ -45,6 +81,7 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
   const armSilenceTimer = useCallback(() => {
     clearSilenceTimer();
     silenceTimerRef.current = setTimeout(() => {
+      intentionalStopRef.current = true;
       recognitionRef.current?.stop();
     }, SILENCE_TIMEOUT_MS);
   }, [clearSilenceTimer]);
@@ -56,49 +93,67 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
     recognition.continuous = true;
     recognition.interimResults = true;
 
+    const attemptRestart = () => {
+      try {
+        recognition.start();
+        armSilenceTimer();
+      } catch {
+        // Manche Browser lehnen einen sofortigen Neustart kurz nach dem
+        // Ende ab; ein zweiter Versuch kurz danach behebt das meist.
+        setTimeout(() => {
+          try {
+            recognition.start();
+            armSilenceTimer();
+          } catch {
+            setIsListening(false);
+            setInterimTranscript("");
+          }
+        }, 250);
+      }
+    };
+
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       armSilenceTimer();
-      // Rebuild the final transcript from the full results list every time
-      // instead of appending only the "new" range indicated by resultIndex.
-      // In continuous mode, some browsers re-emit already-finalized results
-      // with an unreliable resultIndex, which would otherwise duplicate text.
-      // On top of that, some engines (observed on Android Chrome) restart
-      // recognition internally and re-finalize the exact same phrase as a
-      // brand-new result entry — so we also drop back-to-back final chunks
-      // that are identical to the one right before them.
-      let finalText = "";
-      let interimText = "";
-      let lastFinal = "";
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          const chunk = result[0].transcript.trim();
-          if (chunk && chunk.toLowerCase() !== lastFinal.toLowerCase()) {
-            finalText += (finalText ? " " : "") + chunk;
-            lastFinal = chunk;
-          }
-        } else {
-          interimText += result[0].transcript;
-        }
-      }
-      if (finalText) setTranscript(finalText.trim());
+      // Aus der aktuellen results-Liste neu aufbauen statt anzuhängen: manche
+      // Browser melden bereits finalen Text erneut mit unzuverlässigem
+      // resultIndex, außerdem werden direkt aufeinanderfolgende identische
+      // Textstücke (Engine-Wiederholung) verworfen.
+      const { finalText, interimText } = dedupeAdjacentFinal(event.results);
+      lastSessionFinalRef.current = finalText;
+      const combined = [committedTranscriptRef.current, finalText].filter(Boolean).join(" ");
+      if (combined) setTranscript(combined);
       setInterimTranscript(interimText);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      clearSilenceTimer();
-      setError(event.error);
-      setIsListening(false);
+      if (FATAL_ERRORS.has(event.error)) {
+        intentionalStopRef.current = true;
+        setError(event.error);
+      }
+      // Bei allem anderen: nichts tun, onend entscheidet gleich anschließend
+      // ob still neu gestartet wird.
     };
 
     recognition.onend = () => {
-      clearSilenceTimer();
-      setIsListening(false);
-      setInterimTranscript("");
+      if (intentionalStopRef.current) {
+        intentionalStopRef.current = false;
+        clearSilenceTimer();
+        setIsListening(false);
+        setInterimTranscript("");
+        return;
+      }
+      // Unerwartetes Ende, obwohl weder Nutzer noch Silence-Timer das
+      // wollten – bisher Erkanntes sichern und im Hintergrund weiterhören.
+      committedTranscriptRef.current = [committedTranscriptRef.current, lastSessionFinalRef.current]
+        .filter(Boolean)
+        .join(" ");
+      lastSessionFinalRef.current = "";
+      attemptRestart();
     };
 
     recognitionRef.current = recognition;
     return () => {
+      intentionalStopRef.current = true;
       clearSilenceTimer();
       recognition.stop();
       recognitionRef.current = null;
@@ -107,6 +162,9 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
 
   const start = useCallback(() => {
     if (!recognitionRef.current || isListening) return;
+    intentionalStopRef.current = false;
+    committedTranscriptRef.current = "";
+    lastSessionFinalRef.current = "";
     setError(null);
     setTranscript("");
     setInterimTranscript("");
@@ -120,6 +178,7 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
   }, [isListening, armSilenceTimer]);
 
   const stop = useCallback(() => {
+    intentionalStopRef.current = true;
     clearSilenceTimer();
     recognitionRef.current?.stop();
     setIsListening(false);
