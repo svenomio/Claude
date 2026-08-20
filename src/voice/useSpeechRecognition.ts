@@ -22,8 +22,10 @@ export interface UseSpeechRecognitionResult {
 }
 
 // Wie lange nach der letzten erkannten Sprache gewartet wird, bevor die
-// Aufnahme automatisch beendet wird. Der Browser selbst reagiert auf kurze
-// Pausen viel zu empfindlich, deshalb übernehmen wir das Timing hier.
+// Aufnahme wirklich als beendet gilt. Chrome selbst beendet jede einzelne
+// Erkennungs-Runde schon nach einer kurzen Pause (das ist gewollt, siehe
+// unten), aber jede solche Runde wird bis zu diesem Timeout automatisch
+// im Hintergrund neu gestartet – erst danach ist der Nutzer wirklich fertig.
 const SILENCE_TIMEOUT_MS = 3500;
 
 // Fehler, bei denen ein Neustart aussichtslos ist (Berechtigung verweigert,
@@ -90,7 +92,14 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
     if (!Ctor) return;
     const recognition = new Ctor();
     recognition.lang = lang;
-    recognition.continuous = true;
+    // continuous:true turned out to be unreliable on Android: the engine
+    // restarts internally mid-utterance and sometimes re-transcribes the
+    // same audio with different wording, producing duplicate-but-different
+    // entries no exact-match dedupe can catch. continuous:false gives one
+    // clean, complete, independent recognition pass per Chrome-detected
+    // pause; the restart/merge logic below stitches those passes back into
+    // one seamless transcript, so pauses still don't cut the dictation off.
+    recognition.continuous = false;
     recognition.interimResults = true;
 
     const attemptRestart = () => {
