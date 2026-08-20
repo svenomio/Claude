@@ -122,7 +122,9 @@ function findAmountAnchors(text: string): AmountMatch[] {
 
 const FILLER_WORDS = new Set([
   "ich", "habe", "hab", "für", "und", "dann", "war", "noch", "ausgegeben",
-  "um", "auch", "sowie", "außerdem", "an", "am", "beim", "hatte", "gehabt",
+  "um", "auch", "sowie", "außerdem", "an", "am", "beim", "bei", "hatte", "gehabt",
+  "den", "dem", "der", "die", "das", "eingekauft", "gekauft", "gewesen",
+  "bin", "bezahlt", "gemacht", "erledigt",
 ]);
 
 function cleanDescription(text: string): string {
@@ -172,9 +174,13 @@ export function parseExpenses(transcript: string, categories: Category[]): Parse
     const beforeSlice = lower.slice(prevEnd, anchor.start);
     const afterSlice = lower.slice(anchor.end, nextStart);
 
-    const category = guessCategory(`${beforeSlice} ${afterSlice}`, categories);
     const cleanedBefore = cleanDescription(beforeSlice);
     const cleaned = cleanedBefore || cleanDescription(afterSlice);
+    // Only fall back to the next item's slice for category hints when this
+    // item has no description of its own, to avoid misclassifying an item
+    // by keywords that actually belong to its neighbor.
+    const categorySource = cleanedBefore ? beforeSlice : `${beforeSlice} ${afterSlice}`;
+    const category = guessCategory(categorySource, categories);
     const description = cleaned ? capitalize(cleaned) : category;
 
     items.push({ amount: anchor.amount, category, description });

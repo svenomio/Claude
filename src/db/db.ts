@@ -36,10 +36,11 @@ db.version(1).stores({
 export const DEFAULT_CATEGORIES: Category[] = [
   { name: "Lebensmittel", keywords: ["essen", "lebensmittel", "supermarkt", "einkauf", "einkaufen", "cola", "brot", "wasser", "getränk", "snack", "obst", "gemüse"], icon: "🛒" },
   { name: "Café & Restaurant", keywords: ["kaffee", "café", "restaurant", "mittagessen", "essen gehen"], icon: "☕" },
-  { name: "Transport", keywords: ["bahn", "bus", "taxi", "tanken", "benzin", "ticket", "parken"], icon: "🚗" },
+  { name: "Transport", keywords: ["bahn", "bus", "taxi", "tanken", "tank", "sprit", "benzin", "ticket", "parken"], icon: "🚗" },
   { name: "Freizeit", keywords: ["kino", "konzert", "freizeit", "hobby", "sport"], icon: "🎉" },
   { name: "Shopping", keywords: ["kleidung", "shopping", "amazon", "klamotten"], icon: "🛍️" },
   { name: "Gesundheit", keywords: ["apotheke", "arzt", "medikament", "gesundheit"], icon: "💊" },
+  { name: "Beauty & Pflege", keywords: ["maniküre", "pediküre", "friseur", "kosmetik", "nagelstudio", "massage"], icon: "💅" },
   { name: "Wohnen", keywords: ["miete", "strom", "gas", "internet", "wohnen"], icon: "🏠" },
   { name: "Sonstiges", keywords: [], icon: "📦" },
 ];

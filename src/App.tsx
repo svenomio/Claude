@@ -6,11 +6,12 @@ import { parseExpenses, type ParsedExpense } from "./voice/parser";
 import { MicButton } from "./components/MicButton";
 import { BudgetOverview } from "./components/BudgetOverview";
 import { ExpenseList } from "./components/ExpenseList";
-import { ExpenseDraftCard } from "./components/ExpenseDraftCard";
+
+const SAVED_BANNER_MS = 5000;
 
 function App() {
-  const [draft, setDraft] = useState<{ items: ParsedExpense[]; transcript: string } | null>(null);
   const [manualText, setManualText] = useState("");
+  const [lastSaved, setLastSaved] = useState<ParsedExpense[] | null>(null);
 
   const { isSupported, isListening, transcript, interimTranscript, start, stop, reset, error } =
     useSpeechRecognition("de-DE");
@@ -32,12 +33,10 @@ function App() {
   const spent = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
 
   useEffect(() => {
-    if (!isListening && transcript && categories.length > 0) {
-      const items = parseExpenses(transcript, categories);
-      setDraft({ items, transcript });
-      reset();
-    }
-  }, [isListening, transcript, categories, reset]);
+    if (!lastSaved) return;
+    const timer = setTimeout(() => setLastSaved(null), SAVED_BANNER_MS);
+    return () => clearTimeout(timer);
+  }, [lastSaved]);
 
   const saveExpenses = async (items: ParsedExpense[], rawTranscript?: string) => {
     const validItems = items.filter((item) => item.amount !== null && item.amount > 0);
@@ -51,13 +50,22 @@ function App() {
         rawTranscript,
       })) as never,
     );
-    setDraft(null);
+    setLastSaved(validItems);
   };
+
+  useEffect(() => {
+    if (!isListening && transcript && categories.length > 0) {
+      const items = parseExpenses(transcript, categories);
+      saveExpenses(items, transcript);
+      reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isListening, transcript, categories, reset]);
 
   const handleManualSubmit = () => {
     if (!manualText.trim() || categories.length === 0) return;
     const items = parseExpenses(manualText.trim(), categories);
-    setDraft({ items, transcript: manualText.trim() });
+    saveExpenses(items, manualText.trim());
     setManualText("");
   };
 
@@ -90,17 +98,25 @@ function App() {
         {error && <p className="text-xs text-red-500">Fehler: {error}</p>}
       </div>
 
-      {draft && (
-        <ExpenseDraftCard
-          items={draft.items}
-          transcript={draft.transcript}
-          categories={categories}
-          onConfirm={(items) => saveExpenses(items, draft.transcript)}
-          onDiscard={() => setDraft(null)}
-        />
+      {lastSaved && (
+        <div className="w-full rounded-2xl border border-green-200 bg-green-50 p-4">
+          <p className="text-sm font-medium text-green-800">
+            {lastSaved.length > 1 ? `${lastSaved.length} Posten gespeichert:` : "Gespeichert:"}
+          </p>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {lastSaved.map((item, i) => (
+              <li key={i} className="text-sm text-green-700">
+                {item.description} · {item.category} · {item.amount?.toFixed(2)} €
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-green-600">
+            Falsch erkannt? In der Liste unten kannst du jeden Posten nachträglich bearbeiten.
+          </p>
+        </div>
       )}
 
-      {!isSupported && !draft && (
+      {!isSupported && (
         <div className="flex gap-2">
           <input
             type="text"
@@ -125,6 +141,7 @@ function App() {
           expenses={expenses}
           categories={categories}
           onDelete={(id) => db.expenses.delete(id)}
+          onUpdate={(id, patch) => db.expenses.update(id, patch)}
         />
       </section>
     </div>

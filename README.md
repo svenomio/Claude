@@ -6,7 +6,7 @@ Eine Progressive Web App zum Tracken von Ausgaben per Sprache. Einfach das Mikro
 
 - **Voice-Input**: Spracherkennung (Web Speech API, `de-DE`), toleriert kurze Sprechpausen (3,5s Silence-Timeout statt sofortigem Abbruch)
 - **Multi-Item-Erkennung**: ein Satz mit mehreren Ausgaben wird automatisch in einzelne Posten aufgeteilt
-- **Bestätigungs-Dialog**: erkannte Posten können vor dem Speichern einzeln korrigiert oder entfernt werden
+- **Sofort-Speichern**: erkannte Posten werden direkt übernommen, kein Bestätigungsschritt nötig – Korrekturen passieren nachträglich per Klick auf einen Eintrag in der Liste
 - **Lokale Speicherung**: Alle Daten bleiben offline auf dem Gerät (IndexedDB via Dexie)
 - **Budget-Tracking**: Monatslimit setzen, Fortschrittsbalken, Warnung bei Überschreitung
 - **PWA**: installierbar, offline-fähig (Service Worker via `vite-plugin-pwa`)
@@ -25,7 +25,7 @@ npm run preview  # Build lokal testen
 
 - `src/db/db.ts` – Dexie-Schema (Expenses, Categories, Budgets)
 - `src/voice/` – Speech-Recognition-Hook + Parser (Sprache → Betrag/Kategorie/Beschreibung)
-- `src/components/` – UI-Bausteine (Mikro-Button, Budget-Übersicht, Ausgabenliste, Bestätigungs-Card)
+- `src/components/` – UI-Bausteine (Mikro-Button, Budget-Übersicht, Ausgabenliste mit Inline-Edit)
 - `src/App.tsx` – verbindet Voice-Input, Parser und Datenbank
 
 Die Spracherkennung läuft vollständig client-seitig über die Browser-eigene Web Speech API – es gibt aktuell kein Backend.
