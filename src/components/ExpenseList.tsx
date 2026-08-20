@@ -46,6 +46,9 @@ export function ExpenseList({ expenses, categories, onDelete, onUpdate }: Expens
                 <p className="text-xs text-zinc-500">
                   {e.category} · {new Date(e.date).toLocaleDateString("de-DE")}
                 </p>
+                {e.rawTranscript && (
+                  <p className="break-words text-xs italic text-zinc-400">"{e.rawTranscript}"</p>
+                )}
               </div>
             </button>
             <div className="flex shrink-0 items-center gap-2">
