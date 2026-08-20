@@ -1,26 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, ensureDefaultCategories, currentMonth } from "./db/db";
-import { useSpeechRecognition } from "./voice/useSpeechRecognition";
-import { parseExpenses, type ParsedExpense } from "./voice/parser";
+import { db, currentMonth } from "./db/db";
+import { useExpenseCapture } from "./useExpenseCapture";
 import { MicButton } from "./components/MicButton";
 import { BudgetOverview } from "./components/BudgetOverview";
 import { ExpenseList } from "./components/ExpenseList";
 
-const SAVED_BANNER_MS = 5000;
-
 function App() {
   const [manualText, setManualText] = useState("");
-  const [lastSaved, setLastSaved] = useState<ParsedExpense[] | null>(null);
 
-  const { isSupported, isListening, transcript, interimTranscript, start, stop, reset, error } =
-    useSpeechRecognition("de-DE");
+  const {
+    isSupported,
+    isListening,
+    interimTranscript,
+    error,
+    start,
+    stop,
+    lastSaved,
+    categories,
+    submitManualText,
+  } = useExpenseCapture();
 
-  useEffect(() => {
-    ensureDefaultCategories();
-  }, []);
-
-  const categories = useLiveQuery(() => db.categories.toArray(), []) ?? [];
   const month = currentMonth();
 
   const expenses = useLiveQuery(
@@ -32,40 +32,8 @@ function App() {
 
   const spent = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
 
-  useEffect(() => {
-    if (!lastSaved) return;
-    const timer = setTimeout(() => setLastSaved(null), SAVED_BANNER_MS);
-    return () => clearTimeout(timer);
-  }, [lastSaved]);
-
-  const saveExpenses = async (items: ParsedExpense[], rawTranscript?: string) => {
-    const validItems = items.filter((item) => item.amount !== null && item.amount > 0);
-    if (validItems.length === 0) return;
-    await db.expenses.bulkAdd(
-      validItems.map((item) => ({
-        amount: item.amount as number,
-        description: item.description,
-        category: item.category,
-        date: new Date().toISOString(),
-        rawTranscript,
-      })) as never,
-    );
-    setLastSaved(validItems);
-  };
-
-  useEffect(() => {
-    if (!isListening && transcript && categories.length > 0) {
-      const items = parseExpenses(transcript, categories);
-      saveExpenses(items, transcript);
-      reset();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isListening, transcript, categories, reset]);
-
   const handleManualSubmit = () => {
-    if (!manualText.trim() || categories.length === 0) return;
-    const items = parseExpenses(manualText.trim(), categories);
-    saveExpenses(items, manualText.trim());
+    submitManualText(manualText);
     setManualText("");
   };
 

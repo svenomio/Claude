@@ -10,6 +10,7 @@ Eine Progressive Web App zum Tracken von Ausgaben per Sprache. Einfach das Mikro
 - **Lokale Speicherung**: Alle Daten bleiben offline auf dem Gerät (IndexedDB via Dexie)
 - **Budget-Tracking**: Monatslimit setzen, Fortschrittsbalken, Warnung bei Überschreitung
 - **PWA**: installierbar, offline-fähig (Service Worker via `vite-plugin-pwa`)
+- **Quick-Capture-Shortcut**: eigenes App-Shortcut ("Ausgabe diktieren"), das direkt ins Mikro springt – ganz ohne Budget-Übersicht oder Liste. Auf Android per langem Druck auf das App-Icon als eigenes Homescreen-Icon herausziehbar, startet beim Öffnen sofort die Aufnahme
 - **Fallback**: Text-Eingabe für Browser ohne Spracherkennungs-Support
 
 ## Entwicklung
@@ -26,6 +27,8 @@ npm run preview  # Build lokal testen
 - `src/db/db.ts` – Dexie-Schema (Expenses, Categories, Budgets)
 - `src/voice/` – Speech-Recognition-Hook + Parser (Sprache → Betrag/Kategorie/Beschreibung)
 - `src/components/` – UI-Bausteine (Mikro-Button, Budget-Übersicht, Ausgabenliste mit Inline-Edit)
-- `src/App.tsx` – verbindet Voice-Input, Parser und Datenbank
+- `src/useExpenseCapture.ts` – gemeinsame Aufnahme-/Speicher-Logik, genutzt von `App.tsx` und `QuickCapture.tsx`
+- `src/App.tsx` – vollständige Ansicht (Budget, Mikro, Liste)
+- `src/QuickCapture.tsx` – minimaler Diktier-Screen für den App-Shortcut (`?quick=1`), startet die Aufnahme automatisch beim Öffnen
 
 Die Spracherkennung läuft vollständig client-seitig über die Browser-eigene Web Speech API – es gibt aktuell kein Backend.
