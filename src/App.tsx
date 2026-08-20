@@ -1,0 +1,131 @@
+import { useEffect, useMemo, useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db, ensureDefaultCategories, currentMonth } from "./db/db";
+import { useSpeechRecognition } from "./voice/useSpeechRecognition";
+import { parseExpense, type ParsedExpense } from "./voice/parser";
+import { MicButton } from "./components/MicButton";
+import { BudgetOverview } from "./components/BudgetOverview";
+import { ExpenseList } from "./components/ExpenseList";
+import { ExpenseDraftCard } from "./components/ExpenseDraftCard";
+
+function App() {
+  const [draft, setDraft] = useState<{ parsed: ParsedExpense; transcript: string } | null>(null);
+  const [manualText, setManualText] = useState("");
+
+  const { isSupported, isListening, transcript, interimTranscript, start, stop, reset, error } =
+    useSpeechRecognition("de-DE");
+
+  useEffect(() => {
+    ensureDefaultCategories();
+  }, []);
+
+  const categories = useLiveQuery(() => db.categories.toArray(), []) ?? [];
+  const month = currentMonth();
+
+  const expenses = useLiveQuery(
+    () => db.expenses.where("date").startsWith(month).reverse().sortBy("date"),
+    [month],
+  ) ?? [];
+
+  const budget = useLiveQuery(() => db.budgets.where("month").equals(month).first(), [month]);
+
+  const spent = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
+
+  useEffect(() => {
+    if (!isListening && transcript && categories.length > 0) {
+      const parsed = parseExpense(transcript, categories);
+      setDraft({ parsed, transcript });
+      reset();
+    }
+  }, [isListening, transcript, categories, reset]);
+
+  const saveExpense = async (parsed: ParsedExpense, rawTranscript?: string) => {
+    if (parsed.amount === null) return;
+    await db.expenses.add({
+      amount: parsed.amount,
+      description: parsed.description,
+      category: parsed.category,
+      date: new Date().toISOString(),
+      rawTranscript,
+    } as never);
+    setDraft(null);
+  };
+
+  const handleManualSubmit = () => {
+    if (!manualText.trim() || categories.length === 0) return;
+    const parsed = parseExpense(manualText.trim(), categories);
+    setDraft({ parsed, transcript: manualText.trim() });
+    setManualText("");
+  };
+
+  const setBudgetLimit = async (limit: number) => {
+    if (budget) {
+      await db.budgets.update(budget.id, { limit });
+    } else {
+      await db.budgets.add({ month, limit } as never);
+    }
+  };
+
+  return (
+    <div className="flex flex-1 flex-col gap-6 px-5 pb-10 pt-8 text-zinc-100">
+      <header className="text-center">
+        <h1 className="text-2xl font-semibold">💜 Sparcity Voice</h1>
+        <p className="mt-1 text-sm text-zinc-500">Sag deine Ausgabe, wir tracken den Rest.</p>
+      </header>
+
+      <BudgetOverview spent={spent} limit={budget?.limit ?? null} onSetLimit={setBudgetLimit} />
+
+      <div className="flex flex-col items-center gap-3">
+        <MicButton
+          isListening={isListening}
+          isSupported={isSupported}
+          onClick={() => (isListening ? stop() : start())}
+        />
+        {interimTranscript && (
+          <p className="max-w-full truncate text-sm italic text-zinc-400">"{interimTranscript}"</p>
+        )}
+        {error && <p className="text-xs text-red-400">Fehler: {error}</p>}
+      </div>
+
+      {draft && (
+        <ExpenseDraftCard
+          draft={draft.parsed}
+          transcript={draft.transcript}
+          categories={categories}
+          onConfirm={(parsed) => saveExpense(parsed, draft.transcript)}
+          onDiscard={() => setDraft(null)}
+        />
+      )}
+
+      {!isSupported && !draft && (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={manualText}
+            onChange={(e) => setManualText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
+            placeholder='z. B. "Kaffee 3,50 Euro"'
+            className="flex-1 rounded-lg bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-violet-500"
+          />
+          <button
+            onClick={handleManualSubmit}
+            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+          >
+            OK
+          </button>
+        </div>
+      )}
+
+      <section className="flex-1">
+        <h2 className="mb-1 text-sm font-medium text-zinc-400">Letzte Ausgaben</h2>
+        <ExpenseList
+          expenses={expenses}
+          categories={categories}
+          onDelete={(id) => db.expenses.delete(id)}
+        />
+      </section>
+    </div>
+  );
+}
+
+export default App;
