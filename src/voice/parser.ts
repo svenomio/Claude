@@ -124,15 +124,22 @@ const FILLER_WORDS = new Set([
   "ich", "habe", "hab", "für", "und", "dann", "war", "noch", "ausgegeben",
   "um", "auch", "sowie", "außerdem", "an", "am", "beim", "bei", "hatte", "gehabt",
   "den", "dem", "der", "die", "das", "eingekauft", "gekauft", "gewesen",
-  "bin", "bezahlt", "gemacht", "erledigt",
+  "bin", "bezahlt", "gemacht", "erledigt", "mir", "mich", "sich", "machen",
+  "lassen", "so", "weiter", "will", "wollte", "möchte", "geht", "gegangen",
+  "wie", "es",
 ]);
 
+// Real item names are short; a much longer "description" almost always
+// means the parser failed to isolate the amount and grabbed leftover
+// sentence fragments instead. Capping it keeps that failure visible and
+// harmless rather than dumping the whole utterance into one entry.
+const MAX_DESCRIPTION_WORDS = 5;
+
 function cleanDescription(text: string): string {
-  return text
+  const words = text
     .split(/\s+/)
-    .filter((w) => w && !FILLER_WORDS.has(w.toLowerCase().replace(/[.,!?]/g, "")))
-    .join(" ")
-    .trim();
+    .filter((w) => w && !FILLER_WORDS.has(w.toLowerCase().replace(/[.,!?]/g, "")));
+  return words.slice(0, MAX_DESCRIPTION_WORDS).join(" ").trim();
 }
 
 function guessCategory(text: string, categories: Category[]): string {

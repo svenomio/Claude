@@ -58,17 +58,21 @@ export function useSpeechRecognition(lang = "de-DE"): UseSpeechRecognitionResult
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       armSilenceTimer();
+      // Rebuild the final transcript from the full results list every time
+      // instead of appending only the "new" range indicated by resultIndex.
+      // In continuous mode, some browsers re-emit already-finalized results
+      // with an unreliable resultIndex, which would otherwise duplicate text.
       let finalText = "";
       let interimText = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          finalText += result[0].transcript;
+          finalText += (finalText ? " " : "") + result[0].transcript;
         } else {
           interimText += result[0].transcript;
         }
       }
-      if (finalText) setTranscript((prev) => (prev ? prev + " " + finalText : finalText).trim());
+      if (finalText) setTranscript(finalText.trim());
       setInterimTranscript(interimText);
     };
 

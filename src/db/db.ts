@@ -40,7 +40,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { name: "Freizeit", keywords: ["kino", "konzert", "freizeit", "hobby", "sport"], icon: "🎉" },
   { name: "Shopping", keywords: ["kleidung", "shopping", "amazon", "klamotten"], icon: "🛍️" },
   { name: "Gesundheit", keywords: ["apotheke", "arzt", "medikament", "gesundheit"], icon: "💊" },
-  { name: "Beauty & Pflege", keywords: ["maniküre", "pediküre", "friseur", "kosmetik", "nagelstudio", "massage"], icon: "💅" },
+  { name: "Beauty & Pflege", keywords: ["maniküre", "pediküre", "friseur", "kosmetik", "nagelstudio", "massage", "nägel", "nagel"], icon: "💅" },
   { name: "Wohnen", keywords: ["miete", "strom", "gas", "internet", "wohnen"], icon: "🏠" },
   { name: "Sonstiges", keywords: [], icon: "📦" },
 ];
