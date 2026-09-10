@@ -343,15 +343,44 @@ const Escalation = (() => {
     },
   ];
 
-  // Alle Segmente sind gleich groß, aber jede Stufe bekommt "weight" davon
-  // (nacheinander, nicht gemischt) – so ist Stufe 1 der große, häufige
-  // Bereich des Rads und Stufe 5 ein einzelnes, seltenes Feld ("Hauptpreis").
+  // Alle Segmente sind gleich groß, jede Stufe bekommt "weight" davon – aber
+  // durchmischt verteilt (nie zwei gleiche Felder direkt nebeneinander),
+  // damit es wie ein echtes Glücksrad aussieht und nicht wie ein paar große
+  // zusammenhängende Blöcke. Klassischer "Reorganize String"-Greedy: in
+  // jedem Schritt die Stufe mit den meisten verbleibenden Feldern wählen,
+  // die nicht gleich dem letzten platzierten Feld ist.
+  function buildSegmentsOnce() {
+    const counters = TIERS.map((tier) => ({ tier, remaining: tier.weight }));
+    const total = counters.reduce((sum, c) => sum + c.remaining, 0);
+    const result = [];
+    let lastTier = null;
+
+    for (let i = 0; i < total; i++) {
+      const available = counters.filter((c) => c.remaining > 0);
+      const eligible = available.filter((c) => c.tier !== lastTier);
+      const pool = eligible.length ? eligible : available;
+      const maxRemaining = Math.max(...pool.map((c) => c.remaining));
+      const topChoices = pool.filter((c) => c.remaining === maxRemaining);
+      const choice = topChoices[Math.floor(Math.random() * topChoices.length)];
+      result.push(choice.tier);
+      choice.remaining -= 1;
+      lastTier = choice.tier;
+    }
+
+    return result;
+  }
+
+  // Das Rad ist ein Kreis: das letzte und das erste Feld grenzen ebenfalls
+  // aneinander. buildSegmentsOnce() prüft das nicht, darum hier so lange neu
+  // würfeln, bis auch dieser Übergang zwei unterschiedliche Stufen zeigt.
   function buildSegments() {
-    const segments = [];
-    TIERS.forEach((tier) => {
-      for (let i = 0; i < tier.weight; i++) segments.push(tier);
-    });
-    return segments;
+    let result = buildSegmentsOnce();
+    let attempts = 0;
+    while (result[0] === result[result.length - 1] && attempts < 50) {
+      result = buildSegmentsOnce();
+      attempts += 1;
+    }
+    return result;
   }
 
   function pickWeightedTier() {

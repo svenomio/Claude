@@ -73,14 +73,15 @@
     }
 
     wheelEl.querySelectorAll(".wheel-segment-label").forEach((el) => el.remove());
-    // Segmente liegen der Reihe nach gruppiert nach Stufe (siehe buildSegments) –
-    // pro Stufe genau ein Label in der Mitte ihres zusammenhängenden Bereichs,
-    // statt ein Label pro (teils sehr schmalem) Einzelsegment.
+    // Segmente sind jetzt durchmischt (siehe buildSegments), liegen also nicht
+    // mehr als ein zusammenhängender Block pro Stufe vor. Damit trotzdem nicht
+    // 10x "Umbau" auf dem Rad steht, gibt's pro Stufe genau ein Label – auf
+    // ihrem ersten Vorkommen im gemischten Rad.
     const radiusPercent = 32; // Abstand vom Mittelpunkt, in % der Rad-Breite/Höhe
-    let cursor = 0;
     Escalation.TIERS.forEach((tier) => {
-      const angle = cursor * slice + (tier.weight * slice) / 2;
-      cursor += tier.weight;
+      const idx = segments.findIndex((s) => s === tier);
+      if (idx === -1) return;
+      const angle = idx * slice + slice / 2;
       const rad = (angle * Math.PI) / 180;
       const x = Math.sin(rad) * radiusPercent;
       const y = -Math.cos(rad) * radiusPercent;
