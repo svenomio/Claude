@@ -4,9 +4,9 @@
 const STORAGE_KEY = "betriebsrat_state_v1";
 
 const DEFAULT_ROSTER = [
-  { id: "p1", name: "Martin V.", position: "Geschäftsführung VEC" },
+  { id: "p1", name: "Martin", position: "Geschäftsführung VEC" },
   { id: "p2", name: "Lukas", position: "Geschäftsführung SmartES" },
-  { id: "p3", name: "Martin S.", position: "Geschäftsführung SmartES" },
+  { id: "p3", name: "Martin", position: "Geschäftsführung SmartES" },
   { id: "p4", name: "Jürgen", position: "Geschäftsführer VEB" },
   { id: "p5", name: "Markus", position: "Chapterlead & IT-Leiter SmartES" },
   { id: "p6", name: "Susi", position: "Vorstand" },
