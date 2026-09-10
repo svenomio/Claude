@@ -313,9 +313,29 @@
   }
 
   // ---------------- Reset ----------------
+  // Kein window.confirm(): das wird in gesandboxten Umgebungen (z.B.
+  // Artifact-Vorschau-iFrames) oft blockiert, wodurch der Klick wirkungslos
+  // bliebe. Stattdessen bestätigt ein zweiter Klick auf den Button selbst.
 
-  resetBtn.addEventListener("click", () => {
-    if (!confirm("Organigramm wirklich auf den Ausgangszustand zurücksetzen?")) return;
+  let resetArmed = false;
+  let resetArmTimeout = null;
+
+  function armReset() {
+    resetArmed = true;
+    resetBtn.textContent = "Wirklich? Nochmal klicken";
+    resetBtn.classList.add("confirming");
+    clearTimeout(resetArmTimeout);
+    resetArmTimeout = setTimeout(disarmReset, 3000);
+  }
+
+  function disarmReset() {
+    resetArmed = false;
+    resetBtn.textContent = "Zurücksetzen";
+    resetBtn.classList.remove("confirming");
+    clearTimeout(resetArmTimeout);
+  }
+
+  function performReset() {
     tree = freshTree();
     segments = Escalation.buildSegments();
     rotation = 0;
@@ -327,6 +347,15 @@
     renderOrgTree();
     eventBanner.hidden = true;
     wheelHint.hidden = false;
+    disarmReset();
+  }
+
+  resetBtn.addEventListener("click", () => {
+    if (resetArmed) {
+      performReset();
+    } else {
+      armReset();
+    }
   });
 
   // ---------------- Init ----------------

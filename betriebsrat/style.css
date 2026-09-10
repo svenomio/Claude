@@ -83,6 +83,12 @@ body {
   color: var(--blue);
 }
 
+.reset-btn.confirming {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--navy);
+}
+
 .event-banner {
   max-width: 720px;
   margin: 0 auto 22px;
