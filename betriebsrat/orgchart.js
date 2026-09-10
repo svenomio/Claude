@@ -49,7 +49,3 @@ const VEC_ORG_CHART = {
     { name: "PV Mission", members: ["Marina", "Stephan", "Christina"] },
   ],
 };
-
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = { VEC_ORG_CHART };
-}

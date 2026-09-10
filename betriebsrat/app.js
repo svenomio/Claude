@@ -1,401 +1,337 @@
-// Betriebsrat – Glücksrad der Führungsebene
-// Alles läuft client-seitig, kein Backend nötig.
+// Betriebsrat – App-Logik: Rad-Interaktion (Wisch/Swipe), Organigramm-Rendering
+// mit FLIP-Animation für versetzte Personen, State-Persistenz.
 
-const STORAGE_KEY = "betriebsrat_state_v1";
+(() => {
+  const STORAGE_KEY = "betriebsrat_org_v2";
 
-const DEFAULT_ROSTER = [
-  { id: "p1", name: "Martin", position: "Geschäftsführung VEC" },
-  { id: "p2", name: "Lukas", position: "Geschäftsführung SmartES" },
-  { id: "p3", name: "Martin", position: "Geschäftsführung SmartES" },
-  { id: "p4", name: "Jürgen", position: "Geschäftsführer VEB" },
-  { id: "p5", name: "Markus", position: "Chapterlead & IT-Leiter SmartES" },
-  { id: "p6", name: "Susi", position: "Vorstand" },
-  { id: "p7", name: "Stefan", position: "Chapterlead" },
-  { id: "p8", name: "Gerhard", position: "Chapterlead" },
-  { id: "p9", name: "Babsi", position: "Chapterlead" },
-  { id: "p10", name: "Jela", position: "Chapterlead" },
-  { id: "p11", name: "Sophia", position: "Chapterlead" },
-];
+  const wheelWrap = document.getElementById("wheelWrap");
+  const wheelEl = document.getElementById("wheel");
+  const wheelHint = document.getElementById("wheelHint");
+  const legendEl = document.getElementById("legend");
+  const orgChartEl = document.getElementById("orgChart");
+  const resetBtn = document.getElementById("resetBtn");
+  const eventBanner = document.getElementById("eventBanner");
+  const eventTier = document.getElementById("eventTier");
+  const eventText = document.getElementById("eventText");
 
-// Große Vornamen-Liste aller Mitarbeiter:innen. Wird für zufällige
-// "Gastauftritte" in der Geschichte verwendet (siehe GUEST_TEMPLATES unten).
-const EMPLOYEE_POOL = [
-  "Albert", "Alexander", "Ana Sofia", "Andrea", "Andreas", "Anna", "Armin",
-  "Arthur", "Bernd", "Caroline", "Christian", "Christian Paul",
-  "Christoph-Hannes", "Clemens", "Damir", "Daniela", "David", "Dejan",
-  "Doris", "Elfi", "Elisabeth Lilli", "Filip", "Florian", "Gerhard",
-  "Gregor", "Günter", "Ines", "Ivan", "Jadranko", "Janine", "Johann",
-  "Johannes", "Julia", "Katharina", "Konstantin Oliver", "Leo Hans", "Lisa",
-  "Lukas", "Magnus", "Manuel", "Marco", "Margit", "Maria", "Markus",
-  "Martin", "Matthias", "Matthias-Karl", "Michael", "Natascha", "Nora",
-  "Patrick", "Philipp", "Rainer", "Robert", "Roland", "Roman", "Sophia",
-  "Stefan", "Thomas", "Tobias", "Torsten-Mario", "Ulrich", "Walter", "Werner",
-];
+  let tree = loadTree() || freshTree();
+  let segments = Escalation.buildSegments();
+  let rotation = 0;
+  let isSpinning = false;
 
-// Kleine Insider-Titel, die bevorzugt (aber nicht ausschließlich) für
-// bestimmte Personen gezogen werden.
-const INSIDER_TITLES = {
-  p2: [
-    "inoffizieller Geschäftsführer VEC (natürlich nicht ganz)",
-    "heimlicher Co-Geschäftsführer VEC – Titel noch ausständig",
-  ],
-};
-
-const GUEST_TEMPLATES = [
-  "Und ganz nebenbei wurde {name} aus dem Nichts {title}.",
-  "Niemand weiß warum, aber plötzlich ist {name} jetzt {title}.",
-  "Gerücht der Stunde: {name} soll heimlich schon {title} sein.",
-  "Parallel dazu hat sich {name} klammheimlich zu {title} ernannt.",
-  "Und dann war da noch {name}, frisch gebackene:r {title}.",
-];
-
-// Titel-Pools nach Absurditäts-Stufe. Je höher das Chaos-Level,
-// desto wahrscheinlicher werden Titel aus höheren Stufen gezogen.
-const TITLE_POOLS = {
-  0: [
-    "Geschäftsführung VEC",
-    "Geschäftsführung SmartES",
-    "Geschäftsführer VEB",
-    "Chapterlead & IT-Leiter SmartES",
-    "Vorstand",
-    "Chapterlead",
-    "Prokurist:in",
-    "Aufsichtsrat",
-    "Berater:in der Geschäftsführung",
-    "Projektleitung",
-  ],
-  1: [
-    "Head of Assistance of Administration",
-    "Senior Vice President für Büroklammern",
-    "Chief Motivation Officer",
-    "Interimistische Teamleitung Kantine",
-    "Beauftragte:r für Homeoffice-Pantoffeln",
-    "Prokurist:in für Sonderaufgaben",
-    "Head of Strategic Coffee Breaks",
-    "Ehrenmitglied des Vorstands (inoffiziell)",
-  ],
-  2: [
-    "Oberste Instanz für Bürostuhl-Angelegenheiten",
-    "Minister:in für Mittagspause",
-    "Hüter:in der geheimen Excel-Formel",
-    "Chef:in vom Kaffeeautomaten",
-    "Vorsitzende:r des Post-it-Komitees",
-    "Sprecher:in der stillen Etage",
-    "Zuständig für das Gerücht der Woche",
-    "Schattenkanzler:in der Buchhaltung",
-  ],
-  3: [
-    "Oberste:r Wächter:in der Büropflanzen",
-    "Geheime:r Strippenzieher:in im Serverraum",
-    "Erbe/Erbin des Locher-Imperiums",
-    "Prophet:in der nächsten Umstrukturierung",
-    "Kaiser:in der Kantine",
-    "Mysteriöse Randnotiz im Organigramm",
-    "Unantastbare Legende der Kaffeeecke",
-    "Kanzler:in im Exil (Büro im 2. Stock)",
-  ],
-};
-
-const CONNECTORS = [
-  "um dann",
-  "während",
-  "nur um kurz darauf",
-  "woraufhin",
-  "und gleichzeitig",
-  "während zeitgleich",
-];
-
-const OPENERS = [
-  "wurde von {old} zu {new}",
-  "stieg von {old} zu {new} auf",
-  "wechselte überraschend von {old} zu {new}",
-  "wurde von {old} zu {new} befördert",
-  "rutschte von {old} in die Rolle {new}",
-];
-
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
+  function freshTree() {
+    return Escalation.materialize(VEC_ORG_CHART);
   }
-}
 
-function save(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function freshState() {
-  return {
-    roster: DEFAULT_ROSTER.map((p) => ({ ...p })),
-    currentRoles: DEFAULT_ROSTER.map((p) => ({ id: p.id, name: p.name, role: p.position })),
-    chaosLevel: 0,
-  };
-}
-
-let state = load() || freshState();
-// Falls die Roster-Struktur aus einer älteren Version stammt, absichern.
-if (!state.roster || !state.currentRoles) state = freshState();
-
-const wheelEl = document.getElementById("wheel");
-const spinBtn = document.getElementById("spinBtn");
-const resetBtn = document.getElementById("resetBtn");
-const chaosBadge = document.getElementById("chaosBadge");
-const storyText = document.getElementById("storyText");
-const storyPlaceholder = document.getElementById("storyPlaceholder");
-const rosterPreview = document.getElementById("rosterPreview");
-const rosterEditor = document.getElementById("rosterEditor");
-const rosterList = document.getElementById("rosterList");
-const toggleRosterBtn = document.getElementById("toggleRoster");
-const addPersonBtn = document.getElementById("addPersonBtn");
-
-const SEGMENT_COLORS = [
-  "#ff6b4a",
-  "#ffcf4a",
-  "#4ade80",
-  "#38bdf8",
-  "#c084fc",
-  "#f472b6",
-  "#fb923c",
-  "#2dd4bf",
-  "#a3e635",
-  "#818cf8",
-  "#fb7185",
-];
-
-function renderWheel() {
-  const people = state.roster;
-  const n = Math.max(people.length, 1);
-  const slice = 360 / n;
-  const gradientStops = people
-    .map((p, i) => {
-      const color = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
-      return `${color} ${i * slice}deg ${(i + 1) * slice}deg`;
-    })
-    .join(", ");
-  wheelEl.style.background = `conic-gradient(${gradientStops})`;
-
-  wheelEl.querySelectorAll(".wheel-segment-label").forEach((el) => el.remove());
-  people.forEach((p, i) => {
-    const angle = slice * i + slice / 2;
-    const label = document.createElement("span");
-    label.className = "wheel-segment-label";
-    label.textContent = p.name;
-    label.style.transform = `rotate(${angle}deg) translate(46%, -50%)`;
-    wheelEl.appendChild(label);
-  });
-}
-
-function renderRosterPreview() {
-  rosterPreview.innerHTML = "";
-  const roles = new Map(state.currentRoles.map((r) => [r.id, r.role]));
-  state.roster.forEach((p) => {
-    const li = document.createElement("li");
-    const nameEl = document.createElement("span");
-    nameEl.className = "name";
-    nameEl.textContent = p.name;
-    const roleEl = document.createElement("span");
-    roleEl.className = "role";
-    roleEl.textContent = roles.get(p.id) || p.position;
-    li.appendChild(nameEl);
-    li.appendChild(roleEl);
-    rosterPreview.appendChild(li);
-  });
-}
-
-function renderRosterEditor() {
-  rosterList.innerHTML = "";
-  state.roster.forEach((p) => {
-    const row = document.createElement("div");
-    row.className = "roster-row";
-
-    const nameInput = document.createElement("input");
-    nameInput.value = p.name;
-    nameInput.placeholder = "Vorname";
-    nameInput.addEventListener("input", () => {
-      p.name = nameInput.value;
-      const cr = state.currentRoles.find((r) => r.id === p.id);
-      if (cr) cr.name = nameInput.value;
-      save(state);
-      renderWheel();
-      renderRosterPreview();
-    });
-
-    const positionInput = document.createElement("input");
-    positionInput.value = p.position;
-    positionInput.placeholder = "Position";
-    positionInput.addEventListener("input", () => {
-      p.position = positionInput.value;
-      save(state);
-    });
-
-    const removeBtn = document.createElement("button");
-    removeBtn.className = "remove-btn";
-    removeBtn.textContent = "✕";
-    removeBtn.addEventListener("click", () => {
-      state.roster = state.roster.filter((x) => x.id !== p.id);
-      state.currentRoles = state.currentRoles.filter((x) => x.id !== p.id);
-      save(state);
-      renderAll();
-    });
-
-    row.appendChild(nameInput);
-    row.appendChild(positionInput);
-    row.appendChild(removeBtn);
-    rosterList.appendChild(row);
-  });
-}
-
-function renderChaosBadge() {
-  chaosBadge.textContent = `Chaos-Level: ${state.chaosLevel}`;
-}
-
-function renderAll() {
-  renderWheel();
-  renderRosterPreview();
-  renderRosterEditor();
-  renderChaosBadge();
-}
-
-function pickTitlePool(chaosLevel) {
-  // Je höher das Chaos-Level, desto mehr Gewicht auf höheren Stufen.
-  const maxTier = Math.min(3, Math.floor(chaosLevel / 2));
-  const pool = [];
-  for (let tier = 0; tier <= maxTier; tier++) {
-    const weight = tier === maxTier ? 3 : 1;
-    for (let w = 0; w < weight; w++) {
-      pool.push(...TITLE_POOLS[tier]);
+  function loadTree() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
     }
   }
-  return pool;
-}
 
-function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+  function saveTree() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tree));
   }
-  return a;
-}
 
-function spin() {
-  if (state.roster.length === 0) return;
-  spinBtn.disabled = true;
+  // ---------------- Rad ----------------
 
-  const extraSpins = 4 + Math.floor(Math.random() * 3); // volle Umdrehungen
-  const randomOffset = Math.random() * 360;
-  const currentRotation = wheelEl._rotation || 0;
-  const newRotation = currentRotation + extraSpins * 360 + randomOffset;
-  wheelEl._rotation = newRotation;
-  wheelEl.style.transform = `rotate(${newRotation}deg)`;
+  function renderWheel() {
+    const n = segments.length;
+    const slice = 360 / n;
+    const stops = segments
+      .map((seg, i) => `${seg.color} ${i * slice}deg ${(i + 1) * slice}deg`)
+      .join(", ");
+    wheelEl.style.background = `conic-gradient(${stops})`;
+  }
 
-  window.setTimeout(() => {
-    resolveSpin();
-    spinBtn.disabled = false;
-  }, 3300);
-}
+  function renderLegend() {
+    legendEl.innerHTML = "";
+    const total = Escalation.TIERS.reduce((s, t) => s + t.weight, 0);
+    Escalation.TIERS.forEach((tier) => {
+      const li = document.createElement("li");
+      if (tier.unique) li.classList.add("unique");
+      const dot = document.createElement("span");
+      dot.className = "legend-dot";
+      dot.style.background = tier.color;
+      const name = document.createElement("span");
+      name.className = "legend-name";
+      name.textContent = `${tier.level}. ${tier.name}`;
+      const rarity = document.createElement("span");
+      rarity.className = "legend-rarity";
+      rarity.textContent = tier.unique
+        ? "Unikat"
+        : `${Math.round((tier.weight / total) * 100)}%`;
+      li.appendChild(dot);
+      li.appendChild(name);
+      li.appendChild(rarity);
+      legendEl.appendChild(li);
+    });
+  }
 
-function resolveSpin() {
-  const previous = state.currentRoles;
-  const pool = pickTitlePool(state.chaosLevel);
-  const basePositions = state.roster.map((p) => p.position);
-  const candidatePool = shuffle([...basePositions, ...pool]);
+  function angleFromCenter(clientX, clientY, rect) {
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = clientX - cx;
+    const dy = clientY - cy;
+    return (Math.atan2(dx, -dy) * 180) / Math.PI;
+  }
 
-  const newRoles = state.roster.map((p, i) => {
-    const prevRole = previous.find((r) => r.id === p.id)?.role || p.position;
-    let newRole = candidatePool[i % candidatePool.length];
-    // Kleine Chance, dass die Rolle absichtlich gleich bleibt, wirkt sonst zu hektisch.
-    if (newRole === prevRole && Math.random() > 0.3) {
-      newRole = pick(pool.length ? pool : basePositions);
-    }
-    // Insider-Titel: manche Personen haben eine kleine Chance auf einen
-    // Spezial-Titel statt eines generischen.
-    const insiderPool = INSIDER_TITLES[p.id];
-    if (insiderPool && Math.random() < 0.2) {
-      newRole = pick(insiderPool);
-    }
-    return { id: p.id, name: p.name, role: newRole, prevRole };
+  function shortestDelta(a, b) {
+    return (((b - a + 540) % 360) + 360) % 360 - 180;
+  }
+
+  let dragging = false;
+  let lastAngle = 0;
+  let history = [];
+
+  wheelWrap.addEventListener("pointerdown", (e) => {
+    if (isSpinning) return;
+    wheelHint.hidden = true;
+    dragging = true;
+    wheelEl.classList.add("dragging");
+    wheelEl.classList.remove("spinning");
+    wheelWrap.setPointerCapture(e.pointerId);
+    const rect = wheelEl.getBoundingClientRect();
+    lastAngle = angleFromCenter(e.clientX, e.clientY, rect);
+    history = [{ t: performance.now(), a: lastAngle }];
   });
 
-  state.currentRoles = newRoles.map(({ id, name, role }) => ({ id, name, role }));
-  state.chaosLevel += 1;
-  save(state);
-
-  const guestLine = buildGuestLine(state.chaosLevel, pool);
-  renderStory(newRoles, guestLine);
-  renderRosterPreview();
-  renderChaosBadge();
-}
-
-function buildGuestLine(chaosLevel, pool) {
-  const guestChance = Math.min(0.75, Math.max(0, (chaosLevel - 1) * 0.15));
-  if (Math.random() >= guestChance) return null;
-  const name = pick(EMPLOYEE_POOL);
-  const title = pick(pool);
-  return pick(GUEST_TEMPLATES).replace("{name}", name).replace("{title}", title);
-}
-
-function renderStory(newRoles, guestLine) {
-  const clauses = newRoles.map((r) => {
-    const opener = pick(OPENERS).replace("{old}", r.prevRole).replace("{new}", r.role);
-    return `${r.name} ${opener}`;
+  wheelWrap.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const rect = wheelEl.getBoundingClientRect();
+    const angle = angleFromCenter(e.clientX, e.clientY, rect);
+    const delta = shortestDelta(lastAngle, angle);
+    rotation += delta;
+    lastAngle = angle;
+    wheelEl.style.transform = `rotate(${rotation}deg)`;
+    const now = performance.now();
+    history.push({ t: now, a: rotation });
+    if (history.length > 6) history.shift();
   });
 
-  let story = "";
-  clauses.forEach((clause, i) => {
-    if (i === 0) {
-      story += clause;
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    wheelEl.classList.remove("dragging");
+
+    let velocity = 0;
+    if (history.length >= 2) {
+      const first = history[0];
+      const last = history[history.length - 1];
+      const dt = last.t - first.t;
+      if (dt > 0) velocity = (last.a - first.a) / dt; // deg/ms, unwrapped rotation values
+    }
+
+    resolveSpin(velocity);
+  }
+
+  wheelWrap.addEventListener("pointerup", endDrag);
+  wheelWrap.addEventListener("pointercancel", endDrag);
+
+  function resolveSpin(velocity) {
+    if (isSpinning) return;
+
+    const dir = velocity < 0 ? -1 : 1;
+    const speed = Math.min(Math.abs(velocity), 1.5);
+    const extraSpins = 3 + Math.floor(Math.random() * 3);
+    const duration = 2.6 + speed * 1.4;
+
+    const tier = Escalation.pickWeightedTier();
+    const candidateIdx = segments
+      .map((s, i) => (s.level === tier.level ? i : -1))
+      .filter((i) => i !== -1);
+    const segIndex = candidateIdx[Math.floor(Math.random() * candidateIdx.length)];
+    const slice = 360 / segments.length;
+    const centerAngle = segIndex * slice + slice / 2;
+
+    const currentMod = ((rotation % 360) + 360) % 360;
+    const desiredMod = (((360 - centerAngle) % 360) + 360) % 360;
+
+    let finalRotation;
+    if (dir === 1) {
+      const deltaMod = ((desiredMod - currentMod) % 360 + 360) % 360;
+      finalRotation = rotation + extraSpins * 360 + deltaMod;
     } else {
-      story += `, ${pick(CONNECTORS)} ${clause}`;
+      const deltaMod = ((currentMod - desiredMod) % 360 + 360) % 360;
+      finalRotation = rotation - extraSpins * 360 - deltaMod;
     }
-  });
-  story += ".";
 
-  if (guestLine) {
-    story += `\n\n${guestLine}`;
+    isSpinning = true;
+    wheelEl.classList.add("spinning");
+    wheelEl.style.setProperty("--spin-duration", `${duration}s`);
+    wheelEl.style.transform = `rotate(${finalRotation}deg)`;
+    rotation = finalRotation;
+
+    wheelEl.addEventListener(
+      "transitionend",
+      () => {
+        wheelEl.classList.remove("spinning");
+        isSpinning = false;
+        applyTier(tier);
+      },
+      { once: true }
+    );
   }
 
-  storyPlaceholder.hidden = true;
-  storyText.hidden = false;
-  storyText.textContent = story;
-  storyText.classList.remove("fade-in");
-  void storyText.offsetWidth; // reflow, damit die Animation neu startet
-  storyText.classList.add("fade-in");
-}
+  // ---------------- Organigramm ----------------
 
-function resetAll() {
-  state = freshState();
-  save(state);
-  wheelEl._rotation = 0;
-  wheelEl.style.transform = "rotate(0deg)";
-  storyText.hidden = true;
-  storyPlaceholder.hidden = false;
-  renderAll();
-}
+  function applyTier(tier) {
+    const oldRects = new Map();
+    orgChartEl.querySelectorAll("[data-member-id]").forEach((el) => {
+      oldRects.set(el.dataset.memberId, el.getBoundingClientRect());
+    });
 
-spinBtn.addEventListener("click", spin);
-resetBtn.addEventListener("click", () => {
-  if (confirm("Chaos-Level und Rollen wirklich zurücksetzen?")) resetAll();
-});
+    const result = tier.apply(tree);
+    saveTree();
 
-toggleRosterBtn.addEventListener("click", () => {
-  rosterEditor.hidden = !rosterEditor.hidden;
-  toggleRosterBtn.textContent = rosterEditor.hidden ? "Bearbeiten" : "Fertig";
-});
+    renderOrgTree();
+    showEvent(tier, result.text);
+    flashUnits(result.changedUnitIds || []);
+    flipMembers(result.changedMemberIds || [], oldRects);
+  }
 
-addPersonBtn.addEventListener("click", () => {
-  const id = `p${Date.now()}`;
-  state.roster.push({ id, name: "Neue Person", position: "Position" });
-  state.currentRoles.push({ id, name: "Neue Person", role: "Position" });
-  save(state);
-  renderAll();
-});
+  function showEvent(tier, text) {
+    eventBanner.hidden = false;
+    eventTier.textContent = `Stufe ${tier.level} · ${tier.name}`;
+    eventText.textContent = text;
+  }
 
-renderAll();
+  function flashUnits(unitIds) {
+    unitIds.forEach((id) => {
+      const el = orgChartEl.querySelector(`[data-unit-id="${id}"] > .org-unit-name`);
+      if (!el) return;
+      el.classList.remove("flash");
+      void el.offsetWidth;
+      el.classList.add("flash");
+    });
+  }
+
+  function flipMembers(memberIds, oldRects) {
+    memberIds.forEach((id) => {
+      const el = orgChartEl.querySelector(`[data-member-id="${id}"]`);
+      if (!el) return;
+      const oldRect = oldRects.get(id);
+      if (oldRect) {
+        const newRect = el.getBoundingClientRect();
+        const dx = oldRect.left - newRect.left;
+        const dy = oldRect.top - newRect.top;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+          el.classList.add("flying");
+          el.style.transition = "none";
+          el.style.transform = `translate(${dx}px, ${dy}px)`;
+          requestAnimationFrame(() => {
+            el.style.transition = "transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)";
+            el.style.transform = "";
+            el.addEventListener(
+              "transitionend",
+              () => {
+                el.classList.remove("flying");
+                el.classList.add("member-flash");
+                setTimeout(() => el.classList.remove("member-flash"), 1100);
+              },
+              { once: true }
+            );
+          });
+          return;
+        }
+      }
+      el.classList.add("member-flash");
+      setTimeout(() => el.classList.remove("member-flash"), 1100);
+    });
+  }
+
+  function renderOrgTree() {
+    orgChartEl.innerHTML = "";
+    const root = document.createElement("div");
+    root.className = "org-root";
+    root.textContent = tree.name;
+    orgChartEl.appendChild(root);
+    orgChartEl.appendChild(renderChildren(tree.children));
+  }
+
+  function renderChildren(children) {
+    const wrap = document.createElement("div");
+    wrap.className = "org-tree";
+    children.forEach((unit) => wrap.appendChild(renderUnit(unit)));
+    return wrap;
+  }
+
+  function renderUnit(unit) {
+    const box = document.createElement("div");
+    box.className = "org-unit";
+    box.dataset.unitId = unit.id;
+
+    const name = document.createElement("p");
+    name.className = "org-unit-name";
+    name.textContent = unit.name;
+    box.appendChild(name);
+
+    if (unit.claim) {
+      const claim = document.createElement("p");
+      claim.className = "org-unit-claim";
+      claim.textContent = `„${unit.claim}“`;
+      box.appendChild(claim);
+    }
+
+    if (unit.members.length) {
+      const members = document.createElement("div");
+      members.className = "org-members";
+      unit.members.forEach((member) => {
+        const chip = document.createElement("span");
+        chip.className = "org-member";
+        chip.dataset.memberId = member.id;
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = member.name;
+        chip.appendChild(nameSpan);
+        if (member.title) {
+          const titleSpan = document.createElement("span");
+          titleSpan.className = "org-member-title";
+          titleSpan.textContent = member.title;
+          chip.appendChild(titleSpan);
+        }
+        members.appendChild(chip);
+      });
+      box.appendChild(members);
+    } else if (!unit.children.length) {
+      const empty = document.createElement("p");
+      empty.className = "org-unit-empty";
+      empty.textContent = "vakant";
+      box.appendChild(empty);
+    }
+
+    if (unit.children.length) {
+      const childrenWrap = document.createElement("div");
+      childrenWrap.className = "org-unit-children";
+      unit.children.forEach((child) => childrenWrap.appendChild(renderUnit(child)));
+      box.appendChild(childrenWrap);
+    }
+
+    return box;
+  }
+
+  // ---------------- Reset ----------------
+
+  resetBtn.addEventListener("click", () => {
+    if (!confirm("Organigramm wirklich auf den Ausgangszustand zurücksetzen?")) return;
+    tree = freshTree();
+    segments = Escalation.buildSegments();
+    rotation = 0;
+    isSpinning = false;
+    wheelEl.classList.remove("spinning", "dragging");
+    wheelEl.style.transform = "rotate(0deg)";
+    saveTree();
+    renderWheel();
+    renderOrgTree();
+    eventBanner.hidden = true;
+    wheelHint.hidden = false;
+  });
+
+  // ---------------- Init ----------------
+
+  renderWheel();
+  renderLegend();
+  renderOrgTree();
+})();
