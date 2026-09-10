@@ -300,25 +300,25 @@ const Escalation = (() => {
       level: 1,
       weight: 10,
       name: "Umbau",
-      color: "#4ade80",
+      color: "#8ecbe6",
       apply: (tree) => runCombo(tree, pickDistinct(BASE_EFFECTS, 2)),
     },
     {
       level: 2,
       weight: 6,
       name: "Reorg-Welle",
-      color: "#ffcf4a",
+      color: "#2e9bc7",
       apply: (tree) => runCombo(tree, pickDistinct(BASE_EFFECTS, 4)),
     },
     {
       level: 3,
       weight: 3,
       name: "Führungswechsel",
-      color: "#c084fc",
+      color: "#0077b6",
       apply: (tree) => runCombo(tree, [effectLeadershipSwap, ...pickDistinct(BASE_EFFECTS, 2)]),
     },
-    { level: 4, weight: 2, name: "Mitarbeiter-Joker", color: "#fb7185", apply: effectJoker },
-    { level: 5, weight: 1, name: "Vorstands-Veranstaltung", color: "#ffd54a", apply: effectUltimate, unique: true },
+    { level: 4, weight: 2, name: "Mitarbeiter-Joker", color: "#0f2a44", apply: effectJoker },
+    { level: 5, weight: 1, name: "Vorstands-Veranstaltung", color: "#e8a33d", apply: effectUltimate, unique: true },
   ];
 
   function buildSegments() {
