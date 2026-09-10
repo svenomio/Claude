@@ -195,6 +195,27 @@ body {
   transition: transform var(--spin-duration, 3.5s) cubic-bezier(0.12, 0.72, 0.15, 1);
 }
 
+.wheel-segment-label {
+  position: absolute;
+  width: 100px;
+  text-align: center;
+  font-family: var(--font-body);
+  line-height: 1.15;
+  pointer-events: none;
+}
+
+.wheel-segment-label strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.wheel-segment-label span {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 600;
+}
+
 .wheel-hint {
   position: absolute;
   bottom: -30px;

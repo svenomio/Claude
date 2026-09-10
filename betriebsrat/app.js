@@ -45,6 +45,25 @@
       .map((seg, i) => `${seg.color} ${i * slice}deg ${(i + 1) * slice}deg`)
       .join(", ");
     wheelEl.style.background = `conic-gradient(${stops})`;
+
+    wheelEl.querySelectorAll(".wheel-segment-label").forEach((el) => el.remove());
+    const radiusPercent = 32; // Abstand vom Mittelpunkt, in % der Rad-Breite/Höhe
+    segments.forEach((seg, i) => {
+      const angle = i * slice + slice / 2;
+      const rad = (angle * Math.PI) / 180;
+      const x = Math.sin(rad) * radiusPercent;
+      const y = -Math.cos(rad) * radiusPercent;
+      const readableAngle = angle > 90 && angle < 270 ? angle + 180 : angle;
+
+      const label = document.createElement("span");
+      label.className = "wheel-segment-label";
+      label.style.color = seg.textColor || "#ffffff";
+      label.style.left = `calc(50% + ${x}%)`;
+      label.style.top = `calc(50% + ${y}%)`;
+      label.style.transform = `translate(-50%, -50%) rotate(${readableAngle}deg)`;
+      label.innerHTML = `<strong>${seg.level}</strong><span>${seg.name}</span>`;
+      wheelEl.appendChild(label);
+    });
   }
 
   function renderLegend() {

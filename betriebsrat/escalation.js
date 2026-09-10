@@ -293,14 +293,17 @@ const Escalation = (() => {
 
   // ---- Die 5 Stufen ----
   // Jede Stufe bündelt mehrere Effekte gleichzeitig, damit auch die
-  // häufigste Stufe spürbar etwas auslöst. weight = Anzahl Segmente auf dem
-  // Rad (je höher die Stufe, desto seltener).
+  // häufigste Stufe spürbar etwas auslöst. weight bestimmt nur die
+  // tatsächliche Trefferwahrscheinlichkeit (siehe pickWeightedTier) – auf
+  // dem Rad bekommt trotzdem jede Stufe ein gleich großes, beschriftetes
+  // Feld (siehe buildSegments), das Rad landet einfach passend darauf.
   const TIERS = [
     {
       level: 1,
       weight: 10,
       name: "Umbau",
       color: "#8ecbe6",
+      textColor: "#0f2a44",
       apply: (tree) => runCombo(tree, pickDistinct(BASE_EFFECTS, 2)),
     },
     {
@@ -308,6 +311,7 @@ const Escalation = (() => {
       weight: 6,
       name: "Reorg-Welle",
       color: "#2e9bc7",
+      textColor: "#ffffff",
       apply: (tree) => runCombo(tree, pickDistinct(BASE_EFFECTS, 4)),
     },
     {
@@ -315,18 +319,31 @@ const Escalation = (() => {
       weight: 3,
       name: "Führungswechsel",
       color: "#0077b6",
+      textColor: "#ffffff",
       apply: (tree) => runCombo(tree, [effectLeadershipSwap, ...pickDistinct(BASE_EFFECTS, 2)]),
     },
-    { level: 4, weight: 2, name: "Mitarbeiter-Joker", color: "#0f2a44", apply: effectJoker },
-    { level: 5, weight: 1, name: "Vorstands-Veranstaltung", color: "#e8a33d", apply: effectUltimate, unique: true },
+    {
+      level: 4,
+      weight: 2,
+      name: "Mitarbeiter-Joker",
+      color: "#0f2a44",
+      textColor: "#ffffff",
+      apply: effectJoker,
+    },
+    {
+      level: 5,
+      weight: 1,
+      name: "Vorstands-Veranstaltung",
+      color: "#e8a33d",
+      textColor: "#0f2a44",
+      apply: effectUltimate,
+      unique: true,
+    },
   ];
 
+  // Gleich große Felder: ein Segment pro Stufe, der Reihe nach.
   function buildSegments() {
-    const segments = [];
-    TIERS.forEach((tier) => {
-      for (let i = 0; i < tier.weight; i++) segments.push(tier);
-    });
-    return shuffle(segments);
+    return TIERS.slice();
   }
 
   function pickWeightedTier() {
