@@ -3,6 +3,7 @@
 
 (() => {
   const STORAGE_KEY = "betriebsrat_org_v2";
+  const HISTORY_KEY = "betriebsrat_history_v1";
 
   const wheelWrap = document.getElementById("wheelWrap");
   const wheelEl = document.getElementById("wheel");
@@ -10,11 +11,11 @@
   const legendEl = document.getElementById("legend");
   const orgChartEl = document.getElementById("orgChart");
   const resetBtn = document.getElementById("resetBtn");
-  const eventBanner = document.getElementById("eventBanner");
-  const eventTier = document.getElementById("eventTier");
-  const eventText = document.getElementById("eventText");
+  const historyEl = document.getElementById("history");
+  const historyPlaceholder = document.getElementById("historyPlaceholder");
 
   let tree = loadTree() || freshTree();
+  let eventHistory = loadHistory();
   let segments = Escalation.buildSegments();
   let rotation = 0;
   let isSpinning = false;
@@ -34,6 +35,19 @@
 
   function saveTree() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tree));
+  }
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveHistory() {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(eventHistory));
   }
 
   // ---------------- Rad ----------------
@@ -104,7 +118,7 @@
 
   let dragging = false;
   let lastAngle = 0;
-  let history = [];
+  let dragHistory = [];
 
   wheelWrap.addEventListener("pointerdown", (e) => {
     if (isSpinning) return;
@@ -115,7 +129,7 @@
     wheelWrap.setPointerCapture(e.pointerId);
     const rect = wheelEl.getBoundingClientRect();
     lastAngle = angleFromCenter(e.clientX, e.clientY, rect);
-    history = [{ t: performance.now(), a: lastAngle }];
+    dragHistory = [{ t: performance.now(), a: lastAngle }];
   });
 
   wheelWrap.addEventListener("pointermove", (e) => {
@@ -127,8 +141,8 @@
     lastAngle = angle;
     wheelEl.style.transform = `rotate(${rotation}deg)`;
     const now = performance.now();
-    history.push({ t: now, a: rotation });
-    if (history.length > 6) history.shift();
+    dragHistory.push({ t: now, a: rotation });
+    if (dragHistory.length > 6) dragHistory.shift();
   });
 
   function endDrag() {
@@ -137,9 +151,9 @@
     wheelEl.classList.remove("dragging");
 
     let velocity = 0;
-    if (history.length >= 2) {
-      const first = history[0];
-      const last = history[history.length - 1];
+    if (dragHistory.length >= 2) {
+      const first = dragHistory[0];
+      const last = dragHistory[dragHistory.length - 1];
       const dt = last.t - first.t;
       if (dt > 0) velocity = (last.a - first.a) / dt; // deg/ms, unwrapped rotation values
     }
@@ -207,15 +221,40 @@
     saveTree();
 
     renderOrgTree();
-    showEvent(tier, result.text);
+    addHistoryEntry(tier, result.text);
     flashUnits(result.changedUnitIds || []);
     flipMembers(result.changedMemberIds || [], oldRects);
   }
 
-  function showEvent(tier, text) {
-    eventBanner.hidden = false;
-    eventTier.textContent = `Stufe ${tier.level} · ${tier.name}`;
-    eventText.textContent = text;
+  function addHistoryEntry(tier, text) {
+    const entry = { level: tier.level, name: tier.name, text };
+    eventHistory.push(entry);
+    saveHistory();
+    renderHistoryEntry(entry, eventHistory.length);
+    historyPlaceholder.hidden = true;
+    historyEl.scrollTop = historyEl.scrollHeight;
+  }
+
+  function renderHistoryEntry(entry, index) {
+    const el = document.createElement("div");
+    el.className = "history-entry";
+    const meta = document.createElement("span");
+    meta.className = "history-meta";
+    meta.textContent = `#${index} · Stufe ${entry.level} · ${entry.name}`;
+    const text = document.createElement("p");
+    text.className = "history-text";
+    text.textContent = entry.text;
+    el.appendChild(meta);
+    el.appendChild(text);
+    historyEl.appendChild(el);
+    return el;
+  }
+
+  function renderHistory() {
+    historyEl.innerHTML = "";
+    eventHistory.forEach((entry, i) => renderHistoryEntry(entry, i + 1));
+    historyPlaceholder.hidden = eventHistory.length > 0;
+    historyEl.scrollTop = historyEl.scrollHeight;
   }
 
   function flashUnits(unitIds) {
@@ -296,24 +335,47 @@
     }
 
     if (unit.members.length) {
-      const members = document.createElement("div");
-      members.className = "org-members";
-      unit.members.forEach((member) => {
-        const chip = document.createElement("span");
-        chip.className = "org-member";
-        chip.dataset.memberId = member.id;
-        const nameSpan = document.createElement("span");
-        nameSpan.textContent = member.name;
-        chip.appendChild(nameSpan);
-        if (member.title) {
-          const titleSpan = document.createElement("span");
-          titleSpan.className = "org-member-title";
-          titleSpan.textContent = member.title;
-          chip.appendChild(titleSpan);
-        }
-        members.appendChild(chip);
-      });
-      box.appendChild(members);
+      const [lead, ...team] = unit.members;
+
+      const leadRow = document.createElement("div");
+      leadRow.className = "org-lead";
+      leadRow.dataset.memberId = lead.id;
+      const leadTag = document.createElement("span");
+      leadTag.className = "org-lead-tag";
+      leadTag.textContent = "Lead";
+      const leadName = document.createElement("span");
+      leadName.className = "org-lead-name";
+      leadName.textContent = lead.name;
+      leadRow.appendChild(leadTag);
+      leadRow.appendChild(leadName);
+      if (lead.title) {
+        const titleSpan = document.createElement("span");
+        titleSpan.className = "org-member-title";
+        titleSpan.textContent = lead.title;
+        leadRow.appendChild(titleSpan);
+      }
+      box.appendChild(leadRow);
+
+      if (team.length) {
+        const members = document.createElement("div");
+        members.className = "org-members";
+        team.forEach((member) => {
+          const chip = document.createElement("span");
+          chip.className = "org-member";
+          chip.dataset.memberId = member.id;
+          const nameSpan = document.createElement("span");
+          nameSpan.textContent = member.name;
+          chip.appendChild(nameSpan);
+          if (member.title) {
+            const titleSpan = document.createElement("span");
+            titleSpan.className = "org-member-title";
+            titleSpan.textContent = member.title;
+            chip.appendChild(titleSpan);
+          }
+          members.appendChild(chip);
+        });
+        box.appendChild(members);
+      }
     } else if (!unit.children.length) {
       const empty = document.createElement("p");
       empty.className = "org-unit-empty";
@@ -356,15 +418,17 @@
 
   function performReset() {
     tree = freshTree();
+    eventHistory = [];
     segments = Escalation.buildSegments();
     rotation = 0;
     isSpinning = false;
     wheelEl.classList.remove("spinning", "dragging");
     wheelEl.style.transform = "rotate(0deg)";
     saveTree();
+    saveHistory();
     renderWheel();
     renderOrgTree();
-    eventBanner.hidden = true;
+    renderHistory();
     wheelHint.hidden = false;
     disarmReset();
   }
@@ -382,4 +446,5 @@
   renderWheel();
   renderLegend();
   renderOrgTree();
+  renderHistory();
 })();

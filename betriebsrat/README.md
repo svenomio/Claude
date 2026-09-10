@@ -15,11 +15,17 @@ Einfach `index.html` im Browser öffnen – kein Build-Schritt, kein Server nöt
   lang, das Ergebnis selbst ist aber immer fair nach den hinterlegten
   Gewichtungen ausgelost (siehe Legende unter dem Rad).
 - **Organigramm**: zeigt den kompletten VEC-Baum (Ausgangsdaten in
-  `orgchart.js`) mit allen Personen. Nach jedem Dreh wird die betroffene
-  Änderung eingeblendet (Banner oben) und im Baum animiert – umbenannte
-  Bereiche blitzen kurz auf, versetzte Personen "fliegen" sichtbar an ihre
-  neue Stelle.
-- **Zurücksetzen**: Organigramm und Chaos wieder auf den VEC-Ausgangszustand.
+  `orgchart.js`) mit allen Personen. Die erste Person jeder Einheit gilt als
+  Lead und wird mit einem "Lead"-Tag hervorgehoben, der Rest der Mannschaft
+  steht kompakter darunter. Nach jedem Dreh wird die Änderung im Baum
+  animiert – umbenannte Bereiche blitzen kurz auf, versetzte Personen
+  "fliegen" sichtbar an ihre neue Stelle.
+- **Geschichte**: jeder Dreh wird als Eintrag unter den vorherigen
+  angehängt (oben im Verlauf), sodass sich beim Lesen eine fortlaufende
+  Chronik der Organisationsgeschichte ergibt. Bleibt über Reloads erhalten
+  (`localStorage`), bis man zurücksetzt.
+- **Zurücksetzen**: Organigramm, Geschichte und Chaos wieder auf den
+  VEC-Ausgangszustand.
 
 ## Die 5 Eskalationsstufen
 

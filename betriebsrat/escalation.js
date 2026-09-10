@@ -148,12 +148,13 @@ const Escalation = (() => {
     const a = pick(units);
     const b = pickOtherThan(units, a);
     const nameA = a.name;
-    a.name = b.name;
+    const nameB = b.name;
+    a.name = nameB;
     b.name = nameA;
     return {
       changedUnitIds: [a.id, b.id],
       changedMemberIds: [],
-      text: `"${nameA}" und "${b.name}" tauschen die Namen.`,
+      text: `"${nameA}" und "${nameB}" tauschen die Namen.`,
     };
   }
 
