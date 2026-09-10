@@ -60,6 +60,18 @@
       .join(", ");
     wheelEl.style.background = `conic-gradient(${stops})`;
 
+    // Trennlinien zwischen JEDEM Einzelfeld (nicht nur zwischen Stufen),
+    // damit gleichfarbige Nachbarfelder nicht optisch zu einem großen
+    // Bereich verschmelzen – alle Felder sind gleich groß, nur die Anzahl
+    // pro Stufe unterscheidet sich.
+    wheelEl.querySelectorAll(".wheel-divider").forEach((el) => el.remove());
+    for (let i = 0; i < n; i++) {
+      const divider = document.createElement("div");
+      divider.className = "wheel-divider";
+      divider.style.transform = `translateX(-50%) rotate(${i * slice}deg)`;
+      wheelEl.appendChild(divider);
+    }
+
     wheelEl.querySelectorAll(".wheel-segment-label").forEach((el) => el.remove());
     // Segmente liegen der Reihe nach gruppiert nach Stufe (siehe buildSegments) –
     // pro Stufe genau ein Label in der Mitte ihres zusammenhängenden Bereichs,

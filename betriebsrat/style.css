@@ -214,6 +214,17 @@ body {
   transition: transform var(--spin-duration, 3.5s) cubic-bezier(0.12, 0.72, 0.15, 1);
 }
 
+.wheel-divider {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  transform-origin: bottom center;
+  pointer-events: none;
+}
+
 .wheel-segment-label {
   position: absolute;
   width: 100px;
