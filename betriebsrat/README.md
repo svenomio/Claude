@@ -1,8 +1,10 @@
 # Betriebsrat 🎡
 
 Ein Glücksrad für die VEC-Organisation: durch Wischen/Ziehen am Rad wird eine
-von 9 Eskalationsstufen ausgelost, die das Organigramm daneben live verändert
-– animiert, damit man sieht, wer sich gerade wohin bewegt.
+von 5 Eskalationsstufen ausgelost, die das Organigramm daneben live verändert
+– animiert, damit man sieht, wer sich gerade wohin bewegt. Jede Stufe bündelt
+mehrere Effekte gleichzeitig, damit auch die häufigste Stufe schon spürbar
+etwas auslöst.
 
 ## Nutzung
 
@@ -19,27 +21,25 @@ Einfach `index.html` im Browser öffnen – kein Build-Schritt, kein Server nöt
   neue Stelle.
 - **Zurücksetzen**: Organigramm und Chaos wieder auf den VEC-Ausgangszustand.
 
-## Die 9 Eskalationsstufen
+## Die 5 Eskalationsstufen
 
-Je höher die Stufe, desto seltener kommt sie auf dem Rad vor (Stufe 9 ist ein
+Je höher die Stufe, desto seltener kommt sie auf dem Rad vor (Stufe 5 ist ein
 Unikat). Definiert in `escalation.js` unter `TIERS`:
 
-1. Umbenennungswelle – ein Bereich bekommt einen neuen Namen
-2. Namenstausch – zwei Bereiche tauschen ihre Namen
-3. Claim-Update – neuer Name + absurder Claim für einen Bereich
-4. Job-Rotation – eine Person wechselt den Bereich
-5. Titel-Upgrade – eine Person bekommt einen absurden Titel
-6. Doppelschlag – zwei der obigen Effekte gleichzeitig
-7. Führungswechsel – die Geschäftsführung tauscht mit einer anderen Person
-8. Mitarbeiter-Joker – alle Positionen im ganzen Baum werden neu gewürfelt,
+1. Umbau – 2 zufällige Effekte gleichzeitig (Umbenennung, Namenstausch,
+   Claim-Update, Job-Rotation oder Titel-Upgrade)
+2. Reorg-Welle – 4 dieser Effekte gleichzeitig
+3. Führungswechsel – die Geschäftsführung tauscht mit einer anderen Person,
+   plus 2 weitere Effekte gleichzeitig
+4. Mitarbeiter-Joker – alle Positionen im ganzen Baum werden neu gewürfelt,
    die Bereichsstruktur bleibt
-9. Vorstands-Veranstaltung (Unikat) – kompletter Neuaufbau: alle Bereiche
+5. Vorstands-Veranstaltung (Unikat) – kompletter Neuaufbau: alle Bereiche
    *und* alle Positionen werden neu generiert
 
 ## Dateien
 
 - `orgchart.js` – Ausgangs-Organigramm der VEC (Rohdaten)
-- `escalation.js` – die 9 Stufen, Namens-/Titel-Pools, reine Spiellogik ohne DOM-Zugriff
+- `escalation.js` – die 5 Stufen, Namens-/Titel-Pools, reine Spiellogik ohne DOM-Zugriff
 - `index.html` / `style.css` – Struktur & Design (Rad, Legende, Baum-Ansicht)
 - `app.js` – Wisch/Drag-Interaktion fürs Rad, Baum-Rendering inkl.
   FLIP-Animation für versetzte Personen, State-Persistenz (`localStorage`)

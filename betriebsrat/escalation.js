@@ -273,34 +273,52 @@ const Escalation = (() => {
     };
   }
 
-  // ---- Die 9 Stufen ----
-  // weight = Anzahl Segmente auf dem Rad (je höher die Stufe, desto seltener).
+  const BASE_EFFECTS = [effectRename, effectSwapNames, effectClaim, effectRotate, effectTitle];
+
+  function runCombo(tree, effects) {
+    const results = effects.map((fx) => fx(tree));
+    return {
+      changedUnitIds: results.flatMap((r) => r.changedUnitIds),
+      changedMemberIds: results.flatMap((r) => r.changedMemberIds),
+      text: results
+        .map((r) => r.text)
+        .filter(Boolean)
+        .join(" Und gleichzeitig: "),
+    };
+  }
+
+  function pickDistinct(pool, n) {
+    return shuffle(pool).slice(0, Math.min(n, pool.length));
+  }
+
+  // ---- Die 5 Stufen ----
+  // Jede Stufe bündelt mehrere Effekte gleichzeitig, damit auch die
+  // häufigste Stufe spürbar etwas auslöst. weight = Anzahl Segmente auf dem
+  // Rad (je höher die Stufe, desto seltener).
   const TIERS = [
-    { level: 1, weight: 8, name: "Umbenennungswelle", color: "#4ade80", apply: effectRename },
-    { level: 2, weight: 6, name: "Namenstausch", color: "#38bdf8", apply: effectSwapNames },
-    { level: 3, weight: 5, name: "Claim-Update", color: "#a3e635", apply: effectClaim },
-    { level: 4, weight: 4, name: "Job-Rotation", color: "#ffcf4a", apply: effectRotate },
-    { level: 5, weight: 3, name: "Titel-Upgrade", color: "#fb923c", apply: effectTitle },
     {
-      level: 6,
-      weight: 2,
-      name: "Doppelschlag",
-      color: "#f472b6",
-      apply: (tree) => {
-        const effects = [effectRename, effectSwapNames, effectRotate, effectTitle, effectClaim];
-        const [fx1, fx2] = shuffle(effects).slice(0, 2);
-        const r1 = fx1(tree);
-        const r2 = fx2(tree);
-        return {
-          changedUnitIds: [...r1.changedUnitIds, ...r2.changedUnitIds],
-          changedMemberIds: [...r1.changedMemberIds, ...r2.changedMemberIds],
-          text: `${r1.text} Und gleichzeitig: ${r2.text}`,
-        };
-      },
+      level: 1,
+      weight: 10,
+      name: "Umbau",
+      color: "#4ade80",
+      apply: (tree) => runCombo(tree, pickDistinct(BASE_EFFECTS, 2)),
     },
-    { level: 7, weight: 2, name: "Führungswechsel", color: "#c084fc", apply: effectLeadershipSwap },
-    { level: 8, weight: 1, name: "Mitarbeiter-Joker", color: "#fb7185", apply: effectJoker },
-    { level: 9, weight: 1, name: "Vorstands-Veranstaltung", color: "#ffd54a", apply: effectUltimate, unique: true },
+    {
+      level: 2,
+      weight: 6,
+      name: "Reorg-Welle",
+      color: "#ffcf4a",
+      apply: (tree) => runCombo(tree, pickDistinct(BASE_EFFECTS, 4)),
+    },
+    {
+      level: 3,
+      weight: 3,
+      name: "Führungswechsel",
+      color: "#c084fc",
+      apply: (tree) => runCombo(tree, [effectLeadershipSwap, ...pickDistinct(BASE_EFFECTS, 2)]),
+    },
+    { level: 4, weight: 2, name: "Mitarbeiter-Joker", color: "#fb7185", apply: effectJoker },
+    { level: 5, weight: 1, name: "Vorstands-Veranstaltung", color: "#ffd54a", apply: effectUltimate, unique: true },
   ];
 
   function buildSegments() {
