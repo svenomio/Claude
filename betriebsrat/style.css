@@ -227,23 +227,12 @@ body {
 
 .wheel-segment-label {
   position: absolute;
-  width: 100px;
+  width: 18px;
   text-align: center;
-  font-family: var(--font-body);
-  line-height: 1.15;
-  pointer-events: none;
-}
-
-.wheel-segment-label strong {
-  display: block;
-  font-size: 1.05rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
   font-weight: 700;
-}
-
-.wheel-segment-label span {
-  display: block;
-  font-size: 0.66rem;
-  font-weight: 600;
+  pointer-events: none;
 }
 
 .wheel-hint {

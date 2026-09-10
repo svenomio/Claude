@@ -197,6 +197,41 @@ const Escalation = (() => {
     };
   }
 
+  function effectPersonSwap(tree) {
+    const pairs = flattenMembers(tree);
+    if (pairs.length < 2) return { changedUnitIds: [], changedMemberIds: [], text: "" };
+    const first = pick(pairs);
+    const otherUnitPairs = pairs.filter((p) => p.unit.id !== first.unit.id);
+    const second = pick(otherUnitPairs.length ? otherUnitPairs : pairs);
+    if (second.member.id === first.member.id) {
+      return { changedUnitIds: [], changedMemberIds: [], text: "" };
+    }
+
+    first.unit.members = first.unit.members.filter((m) => m.id !== first.member.id);
+    second.unit.members = second.unit.members.filter((m) => m.id !== second.member.id);
+    first.unit.members.push(second.member);
+    second.unit.members.push(first.member);
+
+    return {
+      changedUnitIds: [first.unit.id, second.unit.id],
+      changedMemberIds: [first.member.id, second.member.id],
+      text: `${first.member.name} und ${second.member.name} tauschen die Plätze: "${first.unit.name}" ↔ "${second.unit.name}".`,
+    };
+  }
+
+  function effectDoubleTitle(tree) {
+    const pairs = flattenMembers(tree);
+    if (pairs.length < 2) return effectTitle(tree);
+    const [a, b] = shuffle(pairs);
+    a.member.title = pick(PERSON_TITLE_POOL);
+    b.member.title = pickOtherThan(PERSON_TITLE_POOL, a.member.title);
+    return {
+      changedUnitIds: [a.unit.id, b.unit.id],
+      changedMemberIds: [a.member.id, b.member.id],
+      text: `${a.member.name} ist jetzt „${a.member.title}“, und gleich daneben wird ${b.member.name} zu „${b.member.title}“.`,
+    };
+  }
+
   function effectLeadershipSwap(tree) {
     const units = flattenUnits(tree).filter((u) => u !== tree);
     const gf = units.find((u) => u.name === "Geschäftsführung" && u.members.length > 0) ||
@@ -275,7 +310,15 @@ const Escalation = (() => {
     };
   }
 
-  const BASE_EFFECTS = [effectRename, effectSwapNames, effectClaim, effectRotate, effectTitle];
+  const BASE_EFFECTS = [
+    effectRename,
+    effectSwapNames,
+    effectClaim,
+    effectRotate,
+    effectTitle,
+    effectPersonSwap,
+    effectDoubleTitle,
+  ];
 
   function runCombo(tree, effects) {
     const results = effects.map((fx) => fx(tree));
@@ -303,7 +346,7 @@ const Escalation = (() => {
     {
       level: 1,
       weight: 10,
-      name: "Umbau",
+      name: "Wundertüte",
       color: "#8ecbe6",
       textColor: "#0f2a44",
       apply: (tree) => runCombo(tree, pickDistinct(BASE_EFFECTS, 2)),
@@ -311,7 +354,7 @@ const Escalation = (() => {
     {
       level: 2,
       weight: 6,
-      name: "Reorg-Welle",
+      name: "Kettenreaktion",
       color: "#2e9bc7",
       textColor: "#ffffff",
       apply: (tree) => runCombo(tree, pickDistinct(BASE_EFFECTS, 4)),
@@ -319,7 +362,7 @@ const Escalation = (() => {
     {
       level: 3,
       weight: 3,
-      name: "Führungswechsel",
+      name: "Stühlerücken",
       color: "#0077b6",
       textColor: "#ffffff",
       apply: (tree) => runCombo(tree, [effectLeadershipSwap, ...pickDistinct(BASE_EFFECTS, 2)]),
@@ -327,7 +370,7 @@ const Escalation = (() => {
     {
       level: 4,
       weight: 2,
-      name: "Mitarbeiter-Joker",
+      name: "Blackout",
       color: "#0f2a44",
       textColor: "#ffffff",
       apply: effectJoker,
@@ -335,7 +378,7 @@ const Escalation = (() => {
     {
       level: 5,
       weight: 1,
-      name: "Vorstands-Veranstaltung",
+      name: "Stunde Null",
       color: "#e8a33d",
       textColor: "#0f2a44",
       apply: effectUltimate,
