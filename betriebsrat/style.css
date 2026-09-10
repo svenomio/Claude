@@ -172,6 +172,7 @@ body {
   margin: 0;
   line-height: 1.65;
   font-size: 1.02rem;
+  white-space: pre-line;
 }
 
 .story-text.fade-in {

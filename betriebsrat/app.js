@@ -4,22 +4,64 @@
 const STORAGE_KEY = "betriebsrat_state_v1";
 
 const DEFAULT_ROSTER = [
-  { id: "p1", name: "Martin", position: "Geschäftsführer" },
-  { id: "p2", name: "Marco", position: "Teamleiter" },
-  { id: "p3", name: "Moni", position: "Assistenz der Geschäftsführung" },
+  { id: "p1", name: "Martin V.", position: "Geschäftsführung VEC" },
+  { id: "p2", name: "Lukas", position: "Geschäftsführung SmartES" },
+  { id: "p3", name: "Martin S.", position: "Geschäftsführung SmartES" },
+  { id: "p4", name: "Jürgen", position: "Geschäftsführer VEB" },
+  { id: "p5", name: "Markus", position: "Chapterlead & IT-Leiter SmartES" },
+  { id: "p6", name: "Susi", position: "Vorstand" },
+  { id: "p7", name: "Stefan", position: "Chapterlead" },
+  { id: "p8", name: "Gerhard", position: "Chapterlead" },
+  { id: "p9", name: "Babsi", position: "Chapterlead" },
+  { id: "p10", name: "Jela", position: "Chapterlead" },
+  { id: "p11", name: "Sophia", position: "Chapterlead" },
+];
+
+// Große Vornamen-Liste aller Mitarbeiter:innen. Wird für zufällige
+// "Gastauftritte" in der Geschichte verwendet (siehe GUEST_TEMPLATES unten).
+const EMPLOYEE_POOL = [
+  "Albert", "Alexander", "Ana Sofia", "Andrea", "Andreas", "Anna", "Armin",
+  "Arthur", "Bernd", "Caroline", "Christian", "Christian Paul",
+  "Christoph-Hannes", "Clemens", "Damir", "Daniela", "David", "Dejan",
+  "Doris", "Elfi", "Elisabeth Lilli", "Filip", "Florian", "Gerhard",
+  "Gregor", "Günter", "Ines", "Ivan", "Jadranko", "Janine", "Johann",
+  "Johannes", "Julia", "Katharina", "Konstantin Oliver", "Leo Hans", "Lisa",
+  "Lukas", "Magnus", "Manuel", "Marco", "Margit", "Maria", "Markus",
+  "Martin", "Matthias", "Matthias-Karl", "Michael", "Natascha", "Nora",
+  "Patrick", "Philipp", "Rainer", "Robert", "Roland", "Roman", "Sophia",
+  "Stefan", "Thomas", "Tobias", "Torsten-Mario", "Ulrich", "Walter", "Werner",
+];
+
+// Kleine Insider-Titel, die bevorzugt (aber nicht ausschließlich) für
+// bestimmte Personen gezogen werden.
+const INSIDER_TITLES = {
+  p2: [
+    "inoffizieller Geschäftsführer VEC (natürlich nicht ganz)",
+    "heimlicher Co-Geschäftsführer VEC – Titel noch ausständig",
+  ],
+};
+
+const GUEST_TEMPLATES = [
+  "Und ganz nebenbei wurde {name} aus dem Nichts {title}.",
+  "Niemand weiß warum, aber plötzlich ist {name} jetzt {title}.",
+  "Gerücht der Stunde: {name} soll heimlich schon {title} sein.",
+  "Parallel dazu hat sich {name} klammheimlich zu {title} ernannt.",
+  "Und dann war da noch {name}, frisch gebackene:r {title}.",
 ];
 
 // Titel-Pools nach Absurditäts-Stufe. Je höher das Chaos-Level,
 // desto wahrscheinlicher werden Titel aus höheren Stufen gezogen.
 const TITLE_POOLS = {
   0: [
-    "Geschäftsführer:in",
+    "Geschäftsführung VEC",
+    "Geschäftsführung SmartES",
+    "Geschäftsführer VEB",
+    "Chapterlead & IT-Leiter SmartES",
+    "Vorstand",
+    "Chapterlead",
     "Prokurist:in",
-    "Abteilungsleiter:in",
-    "Teamleiter:in",
     "Aufsichtsrat",
     "Berater:in der Geschäftsführung",
-    "Assistenz der Geschäftsführung",
     "Projektleitung",
   ],
   1: [
@@ -118,6 +160,9 @@ const SEGMENT_COLORS = [
   "#f472b6",
   "#fb923c",
   "#2dd4bf",
+  "#a3e635",
+  "#818cf8",
+  "#fb7185",
 ];
 
 function renderWheel() {
@@ -270,6 +315,12 @@ function resolveSpin() {
     if (newRole === prevRole && Math.random() > 0.3) {
       newRole = pick(pool.length ? pool : basePositions);
     }
+    // Insider-Titel: manche Personen haben eine kleine Chance auf einen
+    // Spezial-Titel statt eines generischen.
+    const insiderPool = INSIDER_TITLES[p.id];
+    if (insiderPool && Math.random() < 0.2) {
+      newRole = pick(insiderPool);
+    }
     return { id: p.id, name: p.name, role: newRole, prevRole };
   });
 
@@ -277,12 +328,21 @@ function resolveSpin() {
   state.chaosLevel += 1;
   save(state);
 
-  renderStory(newRoles);
+  const guestLine = buildGuestLine(state.chaosLevel, pool);
+  renderStory(newRoles, guestLine);
   renderRosterPreview();
   renderChaosBadge();
 }
 
-function renderStory(newRoles) {
+function buildGuestLine(chaosLevel, pool) {
+  const guestChance = Math.min(0.75, Math.max(0, (chaosLevel - 1) * 0.15));
+  if (Math.random() >= guestChance) return null;
+  const name = pick(EMPLOYEE_POOL);
+  const title = pick(pool);
+  return pick(GUEST_TEMPLATES).replace("{name}", name).replace("{title}", title);
+}
+
+function renderStory(newRoles, guestLine) {
   const clauses = newRoles.map((r) => {
     const opener = pick(OPENERS).replace("{old}", r.prevRole).replace("{new}", r.role);
     return `${r.name} ${opener}`;
@@ -297,6 +357,10 @@ function renderStory(newRoles) {
     }
   });
   story += ".";
+
+  if (guestLine) {
+    story += `\n\n${guestLine}`;
+  }
 
   storyPlaceholder.hidden = true;
   storyText.hidden = false;
