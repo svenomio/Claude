@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Betriebsrat – Das Glücksrad der Führungsebene</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>🎡 Betriebsrat</h1>
+      <p class="subtitle">Das Glücksrad der Führungsebene</p>
+      <div class="chaos-badge" id="chaosBadge">Chaos-Level: 0</div>
+    </header>
+
+    <main class="layout">
+      <section class="wheel-section">
+        <div class="wheel-wrap">
+          <div class="wheel-pointer">▼</div>
+          <div class="wheel" id="wheel"></div>
+        </div>
+        <button class="spin-btn" id="spinBtn">Rad drehen</button>
+        <button class="reset-btn" id="resetBtn" title="Chaos-Level und Rollen zurücksetzen">Zurücksetzen</button>
+      </section>
+
+      <section class="story-section">
+        <div class="story-card" id="storyCard">
+          <p class="story-placeholder" id="storyPlaceholder">
+            Noch keine Konstellation gezogen. Dreh das Rad und schau, was aus der Führungsebene wird…
+          </p>
+          <p class="story-text" id="storyText" hidden></p>
+        </div>
+      </section>
+    </main>
+
+    <section class="roster-section">
+      <div class="roster-header">
+        <h2>Namen &amp; Positionen</h2>
+        <button class="toggle-btn" id="toggleRoster">Bearbeiten</button>
+      </div>
+      <div class="roster-editor" id="rosterEditor" hidden>
+        <div class="roster-list" id="rosterList"></div>
+        <button class="add-btn" id="addPersonBtn">+ Person hinzufügen</button>
+      </div>
+      <ul class="roster-preview" id="rosterPreview"></ul>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
