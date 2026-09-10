@@ -1,9 +1,8 @@
-// VEC – Ausgangs-Organigramm (Stand: Ersteingabe).
+// VEC – Ausgangs-Organigramm.
 // Struktur: jede Einheit hat einen Namen, optional direkte Mitglieder
 // ("members") und optional Unter-Einheiten ("children").
-// Offene Punkte siehe Chat-Rückfrage: "M." = Martin?, unbesetzte Einheiten
-// (leeres members-Array) wirklich vakant?, "Stephan" vs. "Stefan" bewusst
-// unterschiedlich?
+// Einheiten mit leerem members-Array sind aktuell wirklich vakant (bestätigt).
+// "Stephan" (PV Mission) ist bewusst eine andere Person als "Stefan".
 
 const VEC_ORG_CHART = {
   name: "VEC",
