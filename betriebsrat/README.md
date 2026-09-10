@@ -15,11 +15,15 @@ Einfach `index.html` im Browser öffnen – kein Build-Schritt, kein Server nöt
   lang, das Ergebnis selbst ist aber immer fair nach den hinterlegten
   Gewichtungen ausgelost (siehe Legende unter dem Rad).
 - **Organigramm**: zeigt den kompletten VEC-Baum (Ausgangsdaten in
-  `orgchart.js`) mit allen Personen. Die erste Person jeder Einheit gilt als
-  Lead und wird mit einem "Lead"-Tag hervorgehoben, der Rest der Mannschaft
-  steht kompakter darunter. Nach jedem Dreh wird die Änderung im Baum
-  animiert – umbenannte Bereiche blitzen kurz auf, versetzte Personen
-  "fliegen" sichtbar an ihre neue Stelle.
+  `orgchart.js`) in drei klar beschrifteten Ebenen – oben die
+  Geschäftsführung, darunter die Chapters, darunter die übrigen Bereiche
+  & Teams. Welche Einheit in welcher Ebene landet, hängt an einem festen
+  `category`-Feld pro Einheit (nicht am Namen), bleibt also auch nach
+  Umbenennungen stabil. Die erste Person jeder Einheit gilt als Lead und
+  wird mit einem "Lead"-Tag hervorgehoben, der Rest der Mannschaft steht
+  kompakter darunter. Nach jedem Dreh wird die Änderung im Baum animiert –
+  umbenannte Bereiche blitzen kurz auf, versetzte Personen "fliegen"
+  sichtbar an ihre neue Stelle.
 - **Geschichte**: jeder Dreh wird als Eintrag unter den vorherigen
   angehängt (oben im Verlauf), sodass sich beim Lesen eine fortlaufende
   Chronik der Organisationsgeschichte ergibt. Bleibt über Reloads erhalten
@@ -30,7 +34,10 @@ Einfach `index.html` im Browser öffnen – kein Build-Schritt, kein Server nöt
 ## Die 5 Eskalationsstufen
 
 Je höher die Stufe, desto seltener kommt sie auf dem Rad vor (Stufe 5 ist ein
-Unikat). Definiert in `escalation.js` unter `TIERS`:
+Unikat – der "Hauptpreis"). Alle Radsegmente sind gleich groß, Stufe 1
+bekommt aber die meisten davon (10 von 22) und Stufe 5 genau eines – dadurch
+wirkt Stufe 1 groß und häufig, Stufe 5 wie ein seltener Treffer. Definiert
+in `escalation.js` unter `TIERS`:
 
 1. Umbau – 2 zufällige Effekte gleichzeitig (Umbenennung, Namenstausch,
    Claim-Update, Job-Rotation oder Titel-Upgrade)

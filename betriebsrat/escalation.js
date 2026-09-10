@@ -91,6 +91,7 @@ const Escalation = (() => {
     return {
       id,
       name: node.name,
+      category: node.category || null,
       claim: null,
       members: (node.members || []).map((name) => {
         idCounter += 1;
@@ -342,9 +343,15 @@ const Escalation = (() => {
     },
   ];
 
-  // Gleich große Felder: ein Segment pro Stufe, der Reihe nach.
+  // Alle Segmente sind gleich groß, aber jede Stufe bekommt "weight" davon
+  // (nacheinander, nicht gemischt) – so ist Stufe 1 der große, häufige
+  // Bereich des Rads und Stufe 5 ein einzelnes, seltenes Feld ("Hauptpreis").
   function buildSegments() {
-    return TIERS.slice();
+    const segments = [];
+    TIERS.forEach((tier) => {
+      for (let i = 0; i < tier.weight; i++) segments.push(tier);
+    });
+    return segments;
   }
 
   function pickWeightedTier() {

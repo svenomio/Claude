@@ -315,6 +315,34 @@ body {
   margin-bottom: 22px;
 }
 
+.org-level {
+  width: 100%;
+  margin-bottom: 30px;
+}
+
+.org-level:last-child {
+  margin-bottom: 0;
+}
+
+.org-level-label {
+  text-align: center;
+  margin: 0 0 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.org-level-leadership .org-unit {
+  border: 2px solid var(--blue);
+  min-width: 220px;
+}
+
+.org-level-chapters .org-unit {
+  border-color: var(--blue-dark);
+}
+
 .org-tree {
   display: flex;
   flex-wrap: wrap;

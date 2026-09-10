@@ -61,9 +61,14 @@
     wheelEl.style.background = `conic-gradient(${stops})`;
 
     wheelEl.querySelectorAll(".wheel-segment-label").forEach((el) => el.remove());
+    // Segmente liegen der Reihe nach gruppiert nach Stufe (siehe buildSegments) –
+    // pro Stufe genau ein Label in der Mitte ihres zusammenhängenden Bereichs,
+    // statt ein Label pro (teils sehr schmalem) Einzelsegment.
     const radiusPercent = 32; // Abstand vom Mittelpunkt, in % der Rad-Breite/Höhe
-    segments.forEach((seg, i) => {
-      const angle = i * slice + slice / 2;
+    let cursor = 0;
+    Escalation.TIERS.forEach((tier) => {
+      const angle = cursor * slice + (tier.weight * slice) / 2;
+      cursor += tier.weight;
       const rad = (angle * Math.PI) / 180;
       const x = Math.sin(rad) * radiusPercent;
       const y = -Math.cos(rad) * radiusPercent;
@@ -71,11 +76,11 @@
 
       const label = document.createElement("span");
       label.className = "wheel-segment-label";
-      label.style.color = seg.textColor || "#ffffff";
+      label.style.color = tier.textColor || "#ffffff";
       label.style.left = `calc(50% + ${x}%)`;
       label.style.top = `calc(50% + ${y}%)`;
       label.style.transform = `translate(-50%, -50%) rotate(${readableAngle}deg)`;
-      label.innerHTML = `<strong>${seg.level}</strong><span>${seg.name}</span>`;
+      label.innerHTML = `<strong>${tier.level}</strong><span>${tier.name}</span>`;
       wheelEl.appendChild(label);
     });
   }
@@ -307,7 +312,33 @@
     root.className = "org-root";
     root.textContent = tree.name;
     orgChartEl.appendChild(root);
-    orgChartEl.appendChild(renderChildren(tree.children));
+
+    const leadership = tree.children.filter((u) => u.category === "leadership");
+    const chapters = tree.children.filter((u) => u.category === "chapter");
+    const teams = tree.children.filter(
+      (u) => u.category !== "leadership" && u.category !== "chapter"
+    );
+
+    if (leadership.length) {
+      orgChartEl.appendChild(renderLevel("Geschäftsführung", leadership, "org-level-leadership"));
+    }
+    if (chapters.length) {
+      orgChartEl.appendChild(renderLevel("Chapters", chapters, "org-level-chapters"));
+    }
+    if (teams.length) {
+      orgChartEl.appendChild(renderLevel("Bereiche & Teams", teams, "org-level-teams"));
+    }
+  }
+
+  function renderLevel(label, units, extraClass) {
+    const section = document.createElement("div");
+    section.className = `org-level ${extraClass}`;
+    const heading = document.createElement("p");
+    heading.className = "org-level-label";
+    heading.textContent = label;
+    section.appendChild(heading);
+    section.appendChild(renderChildren(units));
+    return section;
   }
 
   function renderChildren(children) {
