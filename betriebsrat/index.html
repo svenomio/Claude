@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Betriebsrad – Alle kommen unter die Räder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>🎡 Betriebsrad</h1>
+      <p class="subtitle">Alle kommen unter die Räder</p>
+      <button class="reset-btn" id="resetBtn" title="Organigramm zurücksetzen">Zurücksetzen</button>
+    </header>
+
+    <div class="history-wrap">
+      <p class="history-placeholder" id="historyPlaceholder">
+        Noch keine Geschichte geschrieben. Dreh das Rad …
+      </p>
+      <div class="history" id="history"></div>
+    </div>
+
+    <main class="layout">
+      <section class="wheel-section">
+        <div class="wheel-wrap" id="wheelWrap">
+          <div class="wheel-pointer">▼</div>
+          <div class="wheel" id="wheel"></div>
+          <div class="wheel-hint" id="wheelHint">Wischen zum Drehen</div>
+        </div>
+        <ul class="legend" id="legend"></ul>
+      </section>
+
+      <section class="org-section">
+        <div class="org-chart" id="orgChart"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="orgchart.js"></script>
+  <script src="escalation.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
