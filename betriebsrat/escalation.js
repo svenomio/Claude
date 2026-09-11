@@ -1,4 +1,4 @@
-// Betriebsrat – Eskalations-Engine.
+// Betriebsrad – Eskalations-Engine.
 // Definiert die 9 Eskalationsstufen des Glücksrads, wendet sie auf den
 // (materialisierten) Organigramm-Baum an und liefert Text für das
 // Ereignis-Banner. Reine Logik, kein DOM-Zugriff.

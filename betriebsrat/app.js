@@ -1,4 +1,4 @@
-// Betriebsrat – App-Logik: Rad-Interaktion (Wisch/Swipe), Organigramm-Rendering
+// Betriebsrad – App-Logik: Rad-Interaktion (Wisch/Swipe), Organigramm-Rendering
 // mit FLIP-Animation für versetzte Personen, State-Persistenz.
 
 (() => {

@@ -1,4 +1,6 @@
-# Betriebsrat 🎡
+# Betriebsrad 🎡
+
+*Alle kommen unter die Räder*
 
 Ein Glücksrad für die VEC-Organisation: durch Wischen/Ziehen am Rad wird eine
 von 5 Eskalationsstufen ausgelost, die das Organigramm daneben live verändert
