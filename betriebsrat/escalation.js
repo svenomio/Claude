@@ -320,15 +320,35 @@ const Escalation = (() => {
     effectDoubleTitle,
   ];
 
+  // Erzählerische Übergänge, mit denen mehrere Effekt-Sätze zu einer
+  // Nacherzählung statt einer Aufzählung verschmelzen. Werden pro Kombo neu
+  // gemischt und der Reihe nach verbraucht, damit sich nichts wiederholt.
+  const COMBO_CONNECTORS = [
+    "Kaum ist die Tinte trocken:",
+    "Fast zeitgleich, ein Stockwerk weiter:",
+    "Und während sich das noch nicht herumgesprochen hat:",
+    "Nur wenige Atemzüge später:",
+    "Parallel dazu, ganz beiläufig:",
+    "Wie aus dem Nichts:",
+    "Und als wäre das nicht schon genug:",
+    "Kurz darauf, mitten im Trubel:",
+    "Gleichzeitig, irgendwo auf einem anderen Flur:",
+    "Und mittendrin, ganz nebenbei:",
+    "Noch bevor sich jemand hinsetzen kann:",
+    "Derweil, praktisch im selben Atemzug:",
+  ];
+
   function runCombo(tree, effects) {
     const results = effects.map((fx) => fx(tree));
+    const sentences = results.map((r) => r.text).filter(Boolean);
+    const connectors = shuffle(COMBO_CONNECTORS);
+    const text = sentences
+      .map((sentence, i) => (i === 0 ? sentence : `${connectors[(i - 1) % connectors.length]} ${sentence}`))
+      .join(" ");
     return {
       changedUnitIds: results.flatMap((r) => r.changedUnitIds),
       changedMemberIds: results.flatMap((r) => r.changedMemberIds),
-      text: results
-        .map((r) => r.text)
-        .filter(Boolean)
-        .join(" Und gleichzeitig: "),
+      text,
     };
   }
 
